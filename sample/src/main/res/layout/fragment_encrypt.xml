@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:tools="http://schemas.android.com/tools"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <data>
+
+        <import type="android.view.View" />
+
+        <variable
+            name="viewmodel"
+            type="com.tresorit.zerokitsdk.viewmodel.EncryptViewModel" />
+    </data>
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <android.support.v7.widget.CardView
+            android:layout_width="wrap_content"
+            android:elevation="8dip"
+            android:layout_above="@+id/viewPagerIndicator"
+            android:layout_height="match_parent"
+            tools:targetApi="lollipop">
+
+            <com.tresorit.zerokitsdk.view.CustomViewPager
+                android:id="@+id/pager"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                app:adapter="@{viewmodel.pagerAdapter}"
+                app:offscreenPageLimit="@{2}"
+                app:onPageChangeListener="@{viewmodel.pageChangeListener}" />
+        </android.support.v7.widget.CardView>
+
+        <LinearLayout
+            android:id="@+id/viewPagerIndicator"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
+            android:layout_centerHorizontal="true"
+            android:layout_marginTop="16dip"
+            android:layout_marginBottom="16dip"
+            android:gravity="center"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="4dip"
+                tools:ignore="ContentDescription"
+                android:src="@{viewmodel.drawableDot1}" />
+
+            <ImageView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="4dip"
+                android:src="@{viewmodel.drawableDot2}"
+                tools:ignore="ContentDescription" />
+
+            <ImageView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="4dip"
+                tools:ignore="ContentDescription"
+                android:src="@{viewmodel.drawableDot3}" />
+
+        </LinearLayout>
+
+    </RelativeLayout>
+</layout>
