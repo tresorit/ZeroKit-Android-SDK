@@ -5,7 +5,7 @@ import android.databinding.ObservableField;
 import android.view.View;
 
 import com.tresorit.zerokit.Zerokit;
-import com.tresorit.zerokit.observer.Action1;
+import com.tresorit.zerokit.call.Action;
 import com.tresorit.zerokit.response.ResponseZerokitError;
 import com.tresorit.zerokitsdk.message.CopyEncryptedTextMessage;
 import com.tresorit.zerokitsdk.message.CreateTresorFinishedMessage;
@@ -78,7 +78,7 @@ public class EncryptTextViewModel extends BaseObservable {
     @SuppressWarnings("WeakerAccess")
     void encrypt(String tresorId, String text) {
         inProgressEncrypt.set(true);
-        zerokit.encrypt(tresorId, text).subscribe(new Action1<String>() {
+        zerokit.encrypt(tresorId, text).enqueue(new Action<String>() {
             @Override
             public void call(String encryptedText) {
                 inProgressEncrypt.set(false);
@@ -90,13 +90,13 @@ public class EncryptTextViewModel extends BaseObservable {
     @SuppressWarnings("WeakerAccess")
     void decrypt(String cipherText) {
         inProgressDecrypt.set(true);
-        zerokit.decrypt(cipherText).subscribe(new Action1<String>() {
+        zerokit.decrypt(cipherText).enqueue(new Action<String>() {
             @Override
             public void call(String decryptedText) {
                 inProgressDecrypt.set(false);
                 textDecrypted.set(decryptedText);
             }
-        }, new Action1<ResponseZerokitError>() {
+        }, new Action<ResponseZerokitError>() {
             @Override
             public void call(ResponseZerokitError responseError) {
                 inProgressDecrypt.set(false);

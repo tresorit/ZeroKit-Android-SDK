@@ -117,26 +117,39 @@ function jsonTokenResponseFormatter(response){
     return response;
 }
 
+function bin2string(array){
+	var result = "";
+	for(var i = 0; i < array.length; ++i){
+		result+= (String.fromCharCode(array[i]));
+	}
+	return result;
+}
+
 function callFunction(json){
     var callData =  JSON.parse(json);
-    var mainObj = callData.isMobile ? mobileCmd : cmd.api;
+    var mainObj = callData.type == 2 ? mobileCmd : (callData.type == 1 ? cmd.api : this);
 
     for (i = 0; i < callData.extraArgs.length; i++) {
         var extraArg = callData.extraArgs[i];
         if(extraArg.type == "ByteArray"){
-            callData.args.splice(extraArg.position, 0, new TextDecoder("utf-8").decode(getByteArray(extraArg.id)));
+            callData.args.splice(extraArg.position, 0, bin2string(getByteArray(extraArg.id)));
         } else if (extraArg.type == "JSONToken"){
             callData.args.splice(extraArg.position, 0, parseTokenStr(extraArg.id));
         }
     }
 
     var obj = mainObj[callData.functionName];
-    obj.apply(obj, callData.args).then(function(succ) {
-        if (callData.responseFormatter == "JSONToken"){
-            succ = jsonTokenResponseFormatter(succ);
-        }
-        JSInterfaceResponseHandler.onSuccess(JSON.stringify(succ), callData.id);
-    }, function(err) {
-        JSInterfaceResponseHandler.onError(JSON.stringify(err), callData.id);
-    });
+
+    if (callData.type == 0){
+        JSInterfaceResponseHandler.onSuccess(JSON.stringify(obj.apply(obj, callData.args)), callData.id)
+    } else {
+        obj.apply(obj, callData.args).then(function(succ) {
+            if (callData.responseFormatter == "JSONToken"){
+                succ = jsonTokenResponseFormatter(succ);
+            }
+            JSInterfaceResponseHandler.onSuccess(JSON.stringify(succ), callData.id);
+        }, function(err) {
+            JSInterfaceResponseHandler.onError(JSON.stringify(err), callData.id);
+        });
+     }
 }

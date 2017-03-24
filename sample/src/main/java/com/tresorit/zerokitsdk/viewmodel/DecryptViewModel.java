@@ -5,7 +5,7 @@ import android.databinding.ObservableField;
 import android.view.View;
 
 import com.tresorit.zerokit.Zerokit;
-import com.tresorit.zerokit.observer.Action1;
+import com.tresorit.zerokit.call.Action;
 import com.tresorit.zerokit.response.ResponseZerokitError;
 
 import javax.inject.Inject;
@@ -42,13 +42,13 @@ public class DecryptViewModel extends BaseObservable {
     @SuppressWarnings("WeakerAccess")
     void decrypt(String cipherText){
         inProgressDecrypt.set(true);
-        zerokit.decrypt(cipherText).subscribe(new Action1<String>() {
+        zerokit.decrypt(cipherText).enqueue(new Action<String>() {
             @Override
             public void call(String decryptedText) {
                 inProgressDecrypt.set(false);
                 textDecrypted.set(decryptedText);
             }
-        }, new Action1<ResponseZerokitError>() {
+        }, new Action<ResponseZerokitError>() {
             @Override
             public void call(ResponseZerokitError responseError) {
                 inProgressDecrypt.set(false);

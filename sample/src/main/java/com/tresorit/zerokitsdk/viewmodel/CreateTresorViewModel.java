@@ -6,7 +6,7 @@ import android.view.View;
 
 import com.tresorit.adminapi.AdminApi;
 import com.tresorit.zerokit.Zerokit;
-import com.tresorit.zerokit.observer.Action1;
+import com.tresorit.zerokit.call.Action;
 import com.tresorit.zerokitsdk.message.CreateTresorFinishedMessage;
 
 import org.greenrobot.eventbus.EventBus;
@@ -48,10 +48,10 @@ public class CreateTresorViewModel extends BaseObservable {
     @SuppressWarnings("WeakerAccess")
     void createTresor() {
         inProgress.set(true);
-        this.zerokit.createTresor().subscribe(new Action1<String>() {
+        this.zerokit.createTresor().enqueue(new Action<String>() {
                                                   @Override
                                                   public void call(final String tresorId) {
-                                                      adminApi.approveTresorCreation(tresorId).subscribe(new Action1<String>() {
+                                                      adminApi.approveTresorCreation(tresorId).enqueue(new Action<String>() {
                                                           @Override
                                                           public void call(String initUserRegistrationResponse) {
                                                               CreateTresorViewModel.this.inProgress.set(false);

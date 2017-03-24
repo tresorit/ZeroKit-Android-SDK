@@ -1,29 +1,46 @@
 package com.tresorit.zerokit.response;
 
+import com.tresorit.zerokit.util.JSONObject;
 import com.tresorit.zerokit.util.ZerokitJson;
-
-import org.json.JSONException;
-import org.json.JSONObject;
 
 public class ResponseZerokitError extends ZerokitJson {
     private String type;
     private String code;
     private String message;
     private String description;
+    private final ResponseZerokitInternalException internalException;
 
     public ResponseZerokitError(String type, String code, String message, String description) {
         this.type = type;
         this.code = code;
         this.message = message;
         this.description = description;
+        this.internalException = new ResponseZerokitInternalException();
+    }
+
+    @Override
+    public String toString() {
+        return String.format("type: %s, code: %s, message: %s, description: %s", type, code, message, description);
     }
 
     public ResponseZerokitError(String description) {
         this("", "", "", description);
     }
 
+    public ResponseZerokitError(String message, String description) {
+        this("", "", message, description);
+    }
+
     public ResponseZerokitError() {
         this("", "", "", "");
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public void setMessage(String message) {
+        this.message = message;
     }
 
     public String getType() {
@@ -42,31 +59,25 @@ public class ResponseZerokitError extends ZerokitJson {
         return description;
     }
 
-    public String toJSON(){
+    public String toJSON() {
         JSONObject jsonObject = new JSONObject();
-        try {
-            jsonObject.put("description", description);
-            jsonObject.put("code", code);
-            jsonObject.put("message", message);
-            jsonObject.put("type", type);
-        } catch (JSONException ignored) {
-        }
+        jsonObject.put("description", description);
+        jsonObject.put("code", code);
+        jsonObject.put("message", message);
+        jsonObject.put("type", type);
         return jsonObject.toString();
     }
 
     @SuppressWarnings("unchecked")
     @Override
-    public ResponseZerokitError parse(String json){
-        ResponseZerokitError result = new ResponseZerokitError();
-        try {
-            JSONObject jsonobject = new JSONObject(json);
-            result.description = jsonobject.getString("description");
-            result.type = jsonobject.getString("type");
-            result.code = jsonobject.getString("code");
-            result.message = jsonobject.getString("message");
-        } catch (JSONException ignored) {
-        }
-        return result;
+    public ResponseZerokitError parse(String json) {
+        JSONObject jsonobject = new JSONObject(json);
+        description = jsonobject.getString("description");
+        type = jsonobject.getString("type");
+        code = jsonobject.getString("code");
+        message = jsonobject.getString("message");
+        internalException.parse(jsonobject.getJSONObject("internalException").toString());
+        return this;
     }
 
 }

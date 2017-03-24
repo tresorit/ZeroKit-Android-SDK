@@ -1,4 +1,5 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.tresorit.zerokit">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.tresorit.zerokit">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -6,6 +7,7 @@
     <application android:allowBackup="false">
 
         <provider
+            android:enabled="@bool/provider_enabled"
             android:authorities="${applicationId}.zerokitinitializer"
             android:name=".ZerokitInitializer"
             android:exported="false" />

@@ -8,7 +8,7 @@ import android.view.View;
 import com.tresorit.adminapi.AdminApi;
 import com.tresorit.adminapi.response.ResponseAdminApiError;
 import com.tresorit.zerokit.Zerokit;
-import com.tresorit.zerokit.observer.Action1;
+import com.tresorit.zerokit.call.Action;
 import com.tresorit.zerokit.response.ResponseZerokitError;
 import com.tresorit.zerokitsdk.message.CreateTresorFinishedMessage;
 
@@ -61,23 +61,23 @@ public class ShareTresorViewModel extends BaseObservable {
         inProgress.set(true);
         sharedWithUserId.set("");
         String userId = sharedPreferences.getString(userIdOrUserName, userIdOrUserName);
-        this.zerokit.shareTresor(tresorId, userId).subscribe(new Action1<String>() {
+        this.zerokit.shareTresor(tresorId, userId).enqueue(new Action<String>() {
             @Override
             public void call(String shareId) {
-                adminApi.approveShare(shareId).subscribe(new Action1<String>() {
+                adminApi.approveShare(shareId).enqueue(new Action<String>() {
                     @Override
                     public void call(String result) {
                         sharedWithUserId.set("Shared with: " + userIdOrUserName);
                         inProgress.set(false);
                     }
-                }, new Action1<ResponseAdminApiError>() {
+                }, new Action<ResponseAdminApiError>() {
                     @Override
                     public void call(ResponseAdminApiError errorResponse) {
                         inProgress.set(false);
                     }
                 });
             }
-        }, new Action1<ResponseZerokitError>() {
+        }, new Action<ResponseZerokitError>() {
             @Override
             public void call(ResponseZerokitError responseError) {
                 inProgress.set(false);

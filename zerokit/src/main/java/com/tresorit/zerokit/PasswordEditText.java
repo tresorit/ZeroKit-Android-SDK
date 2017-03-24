@@ -11,9 +11,10 @@ import android.util.AttributeSet;
 
 import java.util.Arrays;
 
-public final class PasswordEditText extends AppCompatEditText implements PasswordHandler {
+public final class PasswordEditText extends AppCompatEditText {
 
     private final LongSparseArray<Editable> editablePool = new LongSparseArray<>();
+    OnChangeListener onChangeListener;
 
     public PasswordEditText(Context context) {
         super(context);
@@ -33,10 +34,31 @@ public final class PasswordEditText extends AppCompatEditText implements Passwor
     private void init() {
         super.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
         super.setText("");
+        super.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                if (onChangeListener != null)
+                    onChangeListener.onChanged();
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+
+            }
+        });
     }
 
     public final void setPasswordExporter(PasswordExporter passwordExporter) {
         passwordExporter.setEditText(this);
+    }
+
+    public final void setOnChangeListener(OnChangeListener onChangeListener) {
+        this.onChangeListener = onChangeListener;
     }
 
     public final PasswordExporter getPasswordExporter() {
@@ -81,7 +103,6 @@ public final class PasswordEditText extends AppCompatEditText implements Passwor
 
     //**********************************
 
-    @Override
     public final void clear() {
         super.getText().clear();
     }
@@ -91,12 +112,10 @@ public final class PasswordEditText extends AppCompatEditText implements Passwor
         return super.getText().length();
     }
 
-    @Override
     public final boolean isEmpty() {
         return length() <= 0;
     }
 
-    @Override
     public final boolean isContentEqual(PasswordEditText passwordEditText) {
         char[] charArray1 = getCharArray(false);
         char[] charArray2 = passwordEditText.getCharArray(false);
@@ -106,7 +125,6 @@ public final class PasswordEditText extends AppCompatEditText implements Passwor
         return result;
     }
 
-    @Override
     public final boolean isContentEqual(PasswordExporter exporter) {
         return isContentEqual(exporter.editText);
     }
@@ -119,9 +137,10 @@ public final class PasswordEditText extends AppCompatEditText implements Passwor
         return chars;
     }
 
-    public final static class PasswordExporter implements PasswordHandler {
+    public static final class PasswordExporter  {
 
         PasswordEditText editText;
+        OnChangeListener onChangeListener;
 
         public PasswordExporter() {
         }
@@ -130,38 +149,43 @@ public final class PasswordEditText extends AppCompatEditText implements Passwor
             this.editText = editText;
         }
 
-        @Override
         public final int length() {
             return editText.length();
         }
 
-        @Override
         public final boolean isEmpty() {
             return editText.isEmpty();
         }
 
-        @Override
         public void clear() {
             editText.clear();
         }
 
-        @Override
         public final boolean isContentEqual(PasswordExporter passwordExporter) {
             return editText.isContentEqual(passwordExporter);
         }
 
-        @Override
         public final boolean isContentEqual(PasswordEditText editText) {
             return editText.isContentEqual(editText);
         }
 
+        public final void setOnChangeListener(OnChangeListener changeListener){
+            this.onChangeListener = changeListener;
+            if (editText != null) editText.setOnChangeListener(changeListener);
+        }
+
         final void setEditText(PasswordEditText editText) {
             this.editText = editText;
+            setOnChangeListener(onChangeListener);
         }
 
         final char[] getCharArray(boolean clear) {
             return editText.getCharArray(clear);
         }
+    }
+
+    public interface OnChangeListener{
+        void onChanged();
     }
 
 }

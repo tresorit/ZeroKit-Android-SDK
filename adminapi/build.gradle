@@ -1,14 +1,14 @@
 apply plugin: 'com.android.library'
 
 android {
-    compileSdkVersion 25
-    buildToolsVersion "25.0.2"
+    compileSdkVersion project.properties.compileSdkVersion
+    buildToolsVersion project.properties.buildToolsVersion
 
     defaultConfig {
-        minSdkVersion 18
-        targetSdkVersion 25
-        versionCode 1
-        versionName "1.0"
+        minSdkVersion  project.properties.minSdkVersion
+        targetSdkVersion project.properties.targetSdkVersion
+        versionCode project.properties.versionCode
+        versionName project.properties.versionName
     }
     buildTypes {
         release {
@@ -20,7 +20,6 @@ android {
 
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
-    compile 'com.android.support:appcompat-v7:25.1.0'
-
+    compile "com.android.support:appcompat-v7:$appcompatVersion"
     compile project(path: ':zerokit')
 }

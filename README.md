@@ -5,12 +5,14 @@ The **ZeroKit SDK** for Android is currently under development and is accessible
 
 You can [sign up for **ZeroKit** here.](https://tresorit.com/zerokit/)
 ## Requirements
-**Android SDK**: The Zerokit SDK library is compatible from API 18 (Android 4.3 - Jelly Bean).
+**Android SDK**: The Zerokit SDK library is compatible from API 21 (Android 5.0 - Lollipop).
+## Changelog
+See the [CHANGELOG.md](./CHANGELOG.md) file.
 ## Download
 Add the dependency to `build.gradle`
 ```groovy
 dependencies {
-    compile 'com.tresorit.zerokit:zerokit:4.0.2'
+    compile 'com.tresorit.zerokit:zerokit:4.0.3'
 }
 ```
 ## Usage
@@ -31,26 +33,19 @@ The following permissions are defined in the Zerokit SDK manifest, and are autom
 * [android.permission.ACCESS_NETWORK_STATE](https://developer.android.com/reference/android/Manifest.permission.html#ACCESS_NETWORK_STATE) - Allows the API to check the connection status in order to determine connection errors
 
 ### Using ZeroKit SDK
-The API provides 3 possible ways to use the Zerokit SDK:
+The API provides 2 possible ways to use the Zerokit SDK:
 
-*Reactive*
+*Asynchron*
 ```java
-Zerokit.getInstance().encrypt(tresorId, "apple").subscribe(
+Zerokit.getInstance().encrypt(tresorId, "apple").execute(
     cipherText -> Log.d("Zerokit", String.format("Encrypted text: %s", cipherText)),
     error -> Log.d("Zerokit", String.format("Encrypting failed: %s", error.getMessage())));
 ```
-*Callback*
-```java
-Zerokit.getInstance().encrypt(tresorId, "apple", result -> {
-    if (result.isError()) Log.d("Zerokit", String.format("Encrypting failed: %s", result.getError().getMessage()));
-    else Log.d("Zerokit", String.format("Encrypted text: %s", result.getResult()));
-});
-```
 *Synchron*
 ```java
-Result<String, ResponseZerokitError> result = Zerokit.getInstance().sync().encrypt(tresorId, "apple");
-if (result.isError()) Log.d("Zerokit", String.format("Encrypting failed: %s", result.getError().getMessage()));
-else Log.d("Zerokit", String.format("Encrypted text: %s", result.getResult()));
+Response<String, ResponseZerokitError> response = Zerokit.getInstance().encrypt(tresorId, "apple").execute();
+if (response.isError()) Log.d("Zerokit", String.format("Encrypting failed: %s", response.getError().getMessage()));
+else Log.d("Zerokit", String.format("Encrypted text: %s", response.getResult()));
 ```
 #### Password handling
 A core concept of ZeroKit is that your application should not access and pass around the users' passwords. All password handling should be done by ZeroKit. For this we provide a `PasswordEditText` UI component that you should present to users to enter their passwords. If you are implementing data-binding solutions in your application and you do not want to use view ids, you can utilize `PasswordHandler` to achieve the same result. 

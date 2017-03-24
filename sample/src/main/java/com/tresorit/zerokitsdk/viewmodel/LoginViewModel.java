@@ -8,7 +8,7 @@ import android.view.View;
 
 import com.tresorit.zerokit.PasswordEditText;
 import com.tresorit.zerokit.Zerokit;
-import com.tresorit.zerokit.observer.Action1;
+import com.tresorit.zerokit.call.Action;
 import com.tresorit.zerokit.response.ResponseZerokitError;
 import com.tresorit.zerokit.response.ResponseZerokitLogin;
 import com.tresorit.zerokitsdk.message.LoginFinisedMessage;
@@ -44,7 +44,7 @@ public class LoginViewModel extends BaseObservable {
 
     private final SharedPreferences sharedPreferences;
 
-    private final Action1<ResponseZerokitError> errorResponseHandlerSdk;
+    private final Action<ResponseZerokitError> errorResponseHandlerSdk;
 
     @Inject
     public LoginViewModel(Zerokit zerokit, final EventBus eventBus, SharedPreferences sharedPreferences) {
@@ -65,7 +65,7 @@ public class LoginViewModel extends BaseObservable {
         passwordError = new ObservableField<>("");
         usernameError = new ObservableField<>("");
         inProgress = new ObservableField<>(false);
-        errorResponseHandlerSdk = new Action1<ResponseZerokitError>() {
+        errorResponseHandlerSdk = new Action<ResponseZerokitError>() {
             @Override
             public void call(ResponseZerokitError errorResponse) {
                 inProgress.set(false);
@@ -95,7 +95,7 @@ public class LoginViewModel extends BaseObservable {
             inProgress.set(false);
             eventBus.post(new ShowMessageMessage("No user id found for this user alias"));
         } else {
-            zerokit.login(userId, passwordExporter).subscribe(new Action1<ResponseZerokitLogin>() {
+            zerokit.login(userId, passwordExporter).enqueue(new Action<ResponseZerokitLogin>() {
                 @Override
                 public void call(ResponseZerokitLogin responseLogin) {
                     inProgress.set(false);

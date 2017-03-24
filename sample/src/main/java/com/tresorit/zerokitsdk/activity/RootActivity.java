@@ -5,7 +5,7 @@ import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 
 import com.tresorit.zerokit.Zerokit;
-import com.tresorit.zerokit.observer.Action1;
+import com.tresorit.zerokit.call.Action;
 import com.tresorit.zerokitsdk.ZerokitApplication;
 import com.tresorit.zerokitsdk.component.DaggerRootComponent;
 
@@ -40,10 +40,10 @@ public class RootActivity extends AppCompatActivity {
         else {
             start = false;
 
-            zerokit.whoAmI().subscribe(new Action1<String>() {
+            zerokit.whoAmI().enqueue(new Action<String>() {
                 @Override
-                public void call(String result) {
-                    if ("null".equals(result))
+                public void call(String s) {
+                    if ("null".equals(s))
                         startActivityForResult(new Intent(RootActivity.this, SignInActivity.class), REQ_DEFAULT);
                     else
                         startActivityForResult(new Intent(RootActivity.this, MainActivity.class), REQ_DEFAULT);

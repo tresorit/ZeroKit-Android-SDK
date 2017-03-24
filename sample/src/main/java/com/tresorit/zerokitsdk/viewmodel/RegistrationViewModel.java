@@ -1,8 +1,13 @@
 package com.tresorit.zerokitsdk.viewmodel;
 
 import android.content.SharedPreferences;
+import android.content.res.Resources;
 import android.databinding.BaseObservable;
 import android.databinding.ObservableField;
+import android.databinding.ObservableInt;
+import android.graphics.PorterDuff;
+import android.graphics.drawable.Drawable;
+import android.graphics.drawable.LayerDrawable;
 import android.text.TextUtils;
 import android.view.View;
 
@@ -10,10 +15,12 @@ import com.tresorit.adminapi.AdminApi;
 import com.tresorit.adminapi.response.ResponseAdminApiError;
 import com.tresorit.adminapi.response.ResponseAdminApiInitUserRegistration;
 import com.tresorit.zerokit.PasswordEditText;
-import com.tresorit.zerokit.observer.Action1;
-import com.tresorit.zerokit.response.ResponseZerokitError;
 import com.tresorit.zerokit.Zerokit;
+import com.tresorit.zerokit.call.Action;
+import com.tresorit.zerokit.response.ResponseZerokitError;
+import com.tresorit.zerokit.response.ResponseZerokitPasswordStrength;
 import com.tresorit.zerokit.response.ResponseZerokitRegister;
+import com.tresorit.zerokitsdk.R;
 import com.tresorit.zerokitsdk.message.ShowMessageMessage;
 
 import org.greenrobot.eventbus.EventBus;
@@ -34,6 +41,12 @@ public class RegistrationViewModel extends BaseObservable {
     public final ObservableField<String> userNameError;
 
     @SuppressWarnings("WeakerAccess")
+    public final ObservableField<Drawable> seekbarColor;
+
+    @SuppressWarnings("WeakerAccess")
+    public final ObservableInt passwordStrength;
+
+    @SuppressWarnings("WeakerAccess")
     public final PasswordEditText.PasswordExporter passwordExporter;
     @SuppressWarnings("WeakerAccess")
     public final PasswordEditText.PasswordExporter passwordExporterConfirm;
@@ -48,18 +61,19 @@ public class RegistrationViewModel extends BaseObservable {
     final SharedPreferences sharedPreferences;
 
     @SuppressWarnings("WeakerAccess")
-    final Action1<ResponseAdminApiError> errorResponseHandlerAdmin;
+    final Action<ResponseAdminApiError> errorResponseHandlerAdmin;
     @SuppressWarnings("WeakerAccess")
-    final Action1<ResponseZerokitError> errorResponseHandlerSdk;
+    final Action<ResponseZerokitError> errorResponseHandlerSdk;
 
     @SuppressWarnings("WeakerAccess")
     public final View.OnClickListener clickListenerRegistration;
     @SuppressWarnings("WeakerAccess")
     public final View.OnFocusChangeListener focusChangeListener;
 
+    private final int colorRes[];
 
     @Inject
-    public RegistrationViewModel(Zerokit zerokit, AdminApi adminApi, final EventBus eventBus, SharedPreferences sharedPreferences) {
+    public RegistrationViewModel(final Zerokit zerokit, AdminApi adminApi, final EventBus eventBus, SharedPreferences sharedPreferences, final Resources resources) {
         this.zerokit = zerokit;
         this.adminApi = adminApi;
         this.eventBus = eventBus;
@@ -70,6 +84,9 @@ public class RegistrationViewModel extends BaseObservable {
         passwordError = new ObservableField<>("");
         passwordConfirmError = new ObservableField<>("");
         userNameError = new ObservableField<>("");
+        passwordStrength = new ObservableInt();
+        seekbarColor = new ObservableField<>(resources.getDrawable(R.drawable.progress));
+        colorRes = new int[]{R.color.red, R.color.deep_orange, R.color.orange, R.color.light_green, R.color.green};
 
         clickListenerRegistration = new View.OnClickListener() {
             @Override
@@ -77,14 +94,14 @@ public class RegistrationViewModel extends BaseObservable {
                 attemptRegistration();
             }
         };
-        errorResponseHandlerAdmin = new Action1<ResponseAdminApiError>() {
+        errorResponseHandlerAdmin = new Action<ResponseAdminApiError>() {
             @Override
             public void call(ResponseAdminApiError responseAdminApiError) {
                 inProgress.set(false);
                 eventBus.post(new ShowMessageMessage(responseAdminApiError.getErrorMessage()));
             }
         };
-        errorResponseHandlerSdk = new Action1<ResponseZerokitError>() {
+        errorResponseHandlerSdk = new Action<ResponseZerokitError>() {
             @Override
             public void call(ResponseZerokitError errorResponse) {
                 inProgress.set(false);
@@ -102,6 +119,20 @@ public class RegistrationViewModel extends BaseObservable {
 
         passwordExporter = new PasswordEditText.PasswordExporter();
         passwordExporterConfirm = new PasswordEditText.PasswordExporter();
+
+        passwordExporter.setOnChangeListener(new PasswordEditText.OnChangeListener() {
+            @Override
+            public void onChanged() {
+                zerokit.getPasswordStrength(passwordExporter).enqueue(new Action<ResponseZerokitPasswordStrength>() {
+                    @Override
+                    public void call(ResponseZerokitPasswordStrength responseZerokitPasswordStrength) {
+                        int score = responseZerokitPasswordStrength.getScore();
+                        passwordStrength.set((score + 1) * 20);
+                        ((LayerDrawable) seekbarColor.get()).findDrawableByLayerId(android.R.id.progress).setColorFilter(resources.getColor(colorRes[score]), PorterDuff.Mode.SRC_IN);
+                    }
+                });
+            }
+        });
     }
 
     @SuppressWarnings("WeakerAccess")
@@ -116,13 +147,13 @@ public class RegistrationViewModel extends BaseObservable {
 
     private void registration(final String alias, final PasswordEditText.PasswordExporter passwordExporter) {
         inProgress.set(true);
-        Action1<ResponseAdminApiInitUserRegistration> responseAdminApiInitUserRegistrationAction = new Action1<ResponseAdminApiInitUserRegistration>() {
+        Action<ResponseAdminApiInitUserRegistration> responseAdminApiInitUserRegistrationAction = new Action<ResponseAdminApiInitUserRegistration>() {
             @Override
             public void call(final ResponseAdminApiInitUserRegistration initUserRegistrationResponse) {
-                Action1<ResponseZerokitRegister> responseZerokitRegisterAction = new Action1<ResponseZerokitRegister>() {
+                Action<ResponseZerokitRegister> responseZerokitRegisterAction = new Action<ResponseZerokitRegister>() {
                     @Override
                     public void call(ResponseZerokitRegister responseZerokitRegister) {
-                        Action1<String> response = new Action1<String>() {
+                        Action<String> response = new Action<String>() {
                             @Override
                             public void call(String s) {
                                 sharedPreferences.edit().putString(alias, initUserRegistrationResponse.getUserId()).apply();
@@ -133,13 +164,13 @@ public class RegistrationViewModel extends BaseObservable {
                                 eventBus.post(new ShowMessageMessage("Successful sign up"));
                             }
                         };
-                        adminApi.validateUser(initUserRegistrationResponse.getUserId(), initUserRegistrationResponse.getRegSessionId(), initUserRegistrationResponse.getRegSessionVerifier(), responseZerokitRegister.getRegValidationVerifier(), alias).subscribe(response, errorResponseHandlerAdmin);
+                        adminApi.validateUser(initUserRegistrationResponse.getUserId(), initUserRegistrationResponse.getRegSessionId(), initUserRegistrationResponse.getRegSessionVerifier(), responseZerokitRegister.getRegValidationVerifier(), alias).enqueue(response, errorResponseHandlerAdmin);
                     }
                 };
-                zerokit.register(initUserRegistrationResponse.getUserId(), initUserRegistrationResponse.getRegSessionId(), passwordExporter).subscribe(responseZerokitRegisterAction, errorResponseHandlerSdk);
+                zerokit.register(initUserRegistrationResponse.getUserId(), initUserRegistrationResponse.getRegSessionId(), passwordExporter).enqueue(responseZerokitRegisterAction, errorResponseHandlerSdk);
             }
         };
-        adminApi.initUserRegistration().subscribe(responseAdminApiInitUserRegistrationAction,
+        adminApi.initUserRegistration().enqueue(responseAdminApiInitUserRegistrationAction,
                 errorResponseHandlerAdmin);
     }
 }

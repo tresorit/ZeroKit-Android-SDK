@@ -1,9 +1,9 @@
-package com.tresorit.zerokit.observer;
+package com.tresorit.zerokit.call;
 
 /**
  * A one-argument action.
  *  @param <T> the first argument type
  */
-public interface Action1<T> extends Action {
+public interface Action<T> {
     void call(T t);
 }

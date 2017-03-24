@@ -16,7 +16,7 @@ import android.view.View;
 import android.view.ViewTreeObserver;
 
 import com.tresorit.zerokit.Zerokit;
-import com.tresorit.zerokit.observer.Action1;
+import com.tresorit.zerokit.call.Action;
 import com.tresorit.zerokit.response.ResponseZerokitError;
 import com.tresorit.zerokitsdk.R;
 import com.tresorit.zerokitsdk.ZerokitApplication;
@@ -153,7 +153,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void whoAmI() {
-        zerokit.whoAmI().subscribe(new Action1<String>() {
+        zerokit.whoAmI().enqueue(new Action<String>() {
             @Override
             public void call(String userId) {
                 MainActivity.this.userId = userId;
@@ -179,7 +179,7 @@ public class MainActivity extends AppCompatActivity {
         progressDialog.setMessage("Logging out...");
         progressDialog.setCancelable(false);
         progressDialog.show();
-        zerokit.logout().subscribe(new Action1<String>() {
+        zerokit.logout().enqueue(new Action<String>() {
             @Override
             public void call(String s) {
                 progressDialog.dismiss();
@@ -187,7 +187,7 @@ public class MainActivity extends AppCompatActivity {
                 intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
                 MainActivity.this.startActivity(intent);
             }
-        }, new Action1<ResponseZerokitError>() {
+        }, new Action<ResponseZerokitError>() {
             @Override
             public void call(ResponseZerokitError s) {
                 progressDialog.dismiss();

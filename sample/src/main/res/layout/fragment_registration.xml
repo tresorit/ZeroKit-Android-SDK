@@ -125,6 +125,20 @@
             </android.support.design.widget.TextInputLayout>
 
             <ProgressBar
+                android:layout_width="0dip"
+                android:layout_height="2dip"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:id="@+id/seekbar"
+                android:progressDrawable="@{viewmodel.seekbarColor}"
+                android:progress="@{viewmodel.passwordStrength}"
+                android:layout_marginLeft="4dip"
+                android:layout_marginRight="4dip"
+                app:layout_constraintTop_toTopOf="@+id/textInputLayout2"
+                android:layout_marginTop="47dp"
+                app:layout_constraintRight_toRightOf="@+id/textInputLayout2"
+                app:layout_constraintLeft_toLeftOf="@+id/textInputLayout2" />
+
+            <ProgressBar
                 android:id="@+id/progressBar"
                 style="?android:attr/progressBarStyle"
                 android:layout_width="wrap_content"

@@ -10,12 +10,15 @@ import com.tresorit.adminapi.AdminApi;
 import com.tresorit.adminapi.response.ResponseAdminApiError;
 import com.tresorit.adminapi.response.ResponseAdminApiInitUserRegistration;
 import com.tresorit.zerokit.Zerokit;
-import com.tresorit.zerokit.extension.Result;
+import com.tresorit.zerokit.call.Response;
+import com.tresorit.zerokit.response.IdentityTokens;
 import com.tresorit.zerokit.response.ResponseZerokitCreateInvitationLink;
 import com.tresorit.zerokit.response.ResponseZerokitError;
 import com.tresorit.zerokit.response.ResponseZerokitInvitationLinkInfo;
 import com.tresorit.zerokit.response.ResponseZerokitLogin;
 import com.tresorit.zerokit.response.ResponseZerokitRegister;
+
+import junit.framework.Assert;
 
 import org.junit.Before;
 import org.junit.Rule;
@@ -26,10 +29,8 @@ import java.io.IOException;
 import java.util.Properties;
 
 import static com.tresorit.zerokit.Zerokit.API_ROOT;
-import static junit.framework.Assert.assertFalse;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 
 /**
  * Instrumentation test, which will execute on an Android device.
@@ -76,10 +77,25 @@ public class InstrumentedTest {
     private static final String USER_01_PASS = "Password01";
     private static final String USER_02_PASS = "Password02";
 
+    private String getUserName(String userName) {
+        return userName;
+    }
+
     @Test
-    public void testChangePasswordLoggedIn(){
+    public void testLogin() {
         String pass01 = USER_01_PASS;
-        String user01 = registrationTest(USER_01_ALIAS, pass01);
+        String user01 = getUserName(USER_01_ALIAS);
+        user01 = registrationTest(user01, pass01);
+
+        loginTest(user01, pass01);
+
+        logoutTest();
+    }
+
+    @Test
+    public void testChangePasswordLoggedIn() {
+        String pass01 = USER_01_PASS;
+        String user01 = registrationTest(getUserName(USER_01_ALIAS), pass01);
 
         loginTest(user01, pass01);
 
@@ -89,9 +105,9 @@ public class InstrumentedTest {
     }
 
     @Test
-    public void testChangePasswordLoggedOut(){
+    public void testChangePasswordLoggedOut() {
         String pass01 = USER_01_PASS;
-        String user01 = registrationTest(USER_01_ALIAS, pass01);
+        String user01 = registrationTest(getUserName(USER_01_ALIAS), pass01);
 
         loginTest(user01, pass01);
 
@@ -101,9 +117,9 @@ public class InstrumentedTest {
     }
 
     @Test
-    public void testCreateTresorAndEncryptText(){
+    public void testCreateTresorAndEncryptText() {
         String pass01 = USER_01_PASS;
-        String user01 = registrationTest(USER_01_ALIAS, pass01);
+        String user01 = registrationTest(getUserName(USER_01_ALIAS), pass01);
 
         loginTest(user01, pass01);
 
@@ -116,11 +132,11 @@ public class InstrumentedTest {
     }
 
     @Test
-    public void testShareTresorAndDecryptText(){
+    public void testShareTresorAndDecryptText() {
         String pass01 = USER_01_PASS;
-        String user01 = registrationTest(USER_01_ALIAS, pass01);
+        String user01 = registrationTest(getUserName(USER_01_ALIAS), pass01);
         String pass02 = USER_02_PASS;
-        String user02 = registrationTest(USER_02_ALIAS, pass02);
+        String user02 = registrationTest(getUserName(USER_02_ALIAS), pass02);
 
         loginTest(user01, pass01);
 
@@ -141,11 +157,11 @@ public class InstrumentedTest {
     }
 
     @Test
-    public void testKickFromTresorAndTryDecryptText(){
+    public void testKickFromTresorAndTryDecryptText() {
         String pass01 = USER_01_PASS;
-        String user01 = registrationTest(USER_01_ALIAS, pass01);
+        String user01 = registrationTest(getUserName(USER_01_ALIAS), pass01);
         String pass02 = USER_02_PASS;
-        String user02 = registrationTest(USER_02_ALIAS, pass02);
+        String user02 = registrationTest(getUserName(USER_02_ALIAS), pass02);
 
         loginTest(user01, pass01);
 
@@ -172,13 +188,12 @@ public class InstrumentedTest {
 
         loginTest(user02, pass02);
 
-        assertTrue(decrypt_noassert(cipherText01).isError());
+        Assert.assertTrue(decrypt_noassert(cipherText01).isError());
 
         logoutTest();
     }
 
-    @Test
-    public void testShareTresorWithLinkAndDecryptText(){
+    public void testShareTresorWithLinkAndDecryptText() {
         String pass01 = USER_01_PASS;
         String user01 = registrationTest(USER_01_ALIAS, pass01);
         String pass02 = USER_02_PASS;
@@ -204,8 +219,7 @@ public class InstrumentedTest {
         logoutTest();
     }
 
-    @Test
-    public void testKickFromLinkSharedTresorAndTryDecryptText(){
+    public void testKickFromLinkSharedTresorAndTryDecryptText() {
         String pass01 = USER_01_PASS;
         String user01 = registrationTest(USER_01_ALIAS, pass01);
         String pass02 = USER_02_PASS;
@@ -238,13 +252,12 @@ public class InstrumentedTest {
 
         loginTest(user02, pass02);
 
-        assertTrue(decrypt_noassert(cipherText01).isError());
+        Assert.assertTrue(decrypt_noassert(cipherText01).isError());
 
         logoutTest();
     }
 
-    @Test
-    public void testShareTresorWithLinkAndPasswordAndDecryptText(){
+    public void testShareTresorWithLinkAndPasswordAndDecryptText() {
         String pass01 = USER_01_PASS;
         String user01 = registrationTest(USER_01_ALIAS, pass01);
         String pass02 = USER_02_PASS;
@@ -270,8 +283,7 @@ public class InstrumentedTest {
         logoutTest();
     }
 
-    @Test
-    public void testKickFromLinkSharedTresorWithPasswordAndTryDecryptText(){
+    public void testKickFromLinkSharedTresorWithPasswordAndTryDecryptText() {
         String pass01 = USER_01_PASS;
         String user01 = registrationTest(USER_01_ALIAS, pass01);
         String pass02 = USER_02_PASS;
@@ -304,15 +316,15 @@ public class InstrumentedTest {
 
         loginTest(user02, pass02);
 
-        assertTrue(decrypt_noassert(cipherText01).isError());
+        Assert.assertTrue(decrypt_noassert(cipherText01).isError());
 
         logoutTest();
     }
 
     @Test
-    public void testLoginWithRememberMe(){
+    public void testLoginWithRememberMe() {
         String pass01 = USER_01_PASS;
-        String user01 = registrationTest(USER_01_ALIAS, pass01);
+        String user01 = registrationTest(getUserName(USER_01_ALIAS), pass01);
 
         loginTest(user01, pass01, true);
 
@@ -322,19 +334,19 @@ public class InstrumentedTest {
 
         logoutTest(true);
 
-        assertTrue(login_noassert(user01).isError());
+        Assert.assertTrue(login_noassert(user01).isError());
 
         assertEquals(whoAmI(), "null");
     }
 
     @Test
-    public void testLoginWithRememberMeAndChangePassword(){
+    public void testLoginWithRememberMeAndChangePassword() {
         String pass01 = USER_01_PASS;
-        String user01 = registrationTest(USER_01_ALIAS, pass01);
+        String user01 = registrationTest(getUserName(USER_01_ALIAS), pass01);
 
         loginTest(user01, pass01, true);
 
-        changePasswordTestSmall(user01, pass01);
+        changePasswordTestSmall(pass01);
 
         logoutTest(false);
 
@@ -379,9 +391,9 @@ public class InstrumentedTest {
         logoutTest();
     }
 
-    public void changePasswordTestSmall(String user, String pass) {
-        changePassword( pass, pass + "new");
-        changePassword( pass + "new", pass);
+    public void changePasswordTestSmall(String pass) {
+        changePassword(pass, pass + "new");
+        changePassword(pass + "new", pass);
     }
 
 
@@ -399,6 +411,7 @@ public class InstrumentedTest {
         assertEquals(whoAmI(), user);
     }
 
+
     private String encryptTest(String tresorId, String text) {
         String cipherText = encrypt(tresorId, text);
         String decryptedText = decrypt(cipherText);
@@ -411,7 +424,7 @@ public class InstrumentedTest {
         ResponseZerokitInvitationLinkInfo invitationLinkInfo = getInvitationLinkInfo(url.substring(1));
         assertEquals(invitationLinkInfo.getMessage(), message);
         assertEquals(invitationLinkInfo.getCreatorUserId(), userId);
-        assertFalse(invitationLinkInfo.getPasswordProtected());
+        Assert.assertFalse(invitationLinkInfo.getPasswordProtected());
         return url;
     }
 
@@ -420,16 +433,16 @@ public class InstrumentedTest {
         ResponseZerokitInvitationLinkInfo invitationLinkInfo = getInvitationLinkInfo(url.substring(1));
         assertEquals(invitationLinkInfo.getMessage(), message);
         assertEquals(invitationLinkInfo.getCreatorUserId(), userId);
-        assertTrue(invitationLinkInfo.getPasswordProtected());
+        Assert.assertTrue(invitationLinkInfo.getPasswordProtected());
         return url;
     }
 
-    private void acceptInvitationLinkNoPasswordTest(String url){
+    private void acceptInvitationLinkNoPasswordTest(String url) {
         ResponseZerokitInvitationLinkInfo invitationLinkInfo = getInvitationLinkInfo(url.substring(1));
         acceptInvitationLinkNoPassword(invitationLinkInfo.getToken());
     }
 
-    private void acceptInvitationLinkTest(String url, String password){
+    private void acceptInvitationLinkTest(String url, String password) {
         ResponseZerokitInvitationLinkInfo invitationLinkInfo = getInvitationLinkInfo(url.substring(1));
         acceptInvitationLink(invitationLinkInfo.getToken(), password);
     }
@@ -449,6 +462,22 @@ public class InstrumentedTest {
     ////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////
 
+    public void assertFalse(boolean condition, ResponseZerokitError zerokitError) {
+        Assert.assertFalse(condition ? zerokitError.toString() : "", condition);
+    }
+
+    public void assertFalse(boolean condition, ResponseAdminApiError adminApiError) {
+        Assert.assertFalse(condition ? adminApiError.toString() : "", condition);
+    }
+
+    public void assertTrue(boolean condition, ResponseZerokitError adminApiError) {
+        Assert.assertTrue(condition ? adminApiError.toString() : "", condition);
+    }
+
+    public void assertTrue(boolean condition, ResponseAdminApiError adminApiError) {
+        Assert.assertTrue(condition ? adminApiError.toString() : "", condition);
+    }
+
     private void login(String username, String password) {
         login(username, password.getBytes());
     }
@@ -462,132 +491,139 @@ public class InstrumentedTest {
     }
 
     private void login(String username, byte[] password, boolean rememberMes) {
-        Result<ResponseZerokitLogin, ResponseZerokitError> response = zerokit.sync().login(username, password, rememberMes);
-        assertTrue(!response.isError());
+        Response<ResponseZerokitLogin, ResponseZerokitError> response = zerokit.login(username, password, rememberMes).execute();
+        assertFalse(response.isError(), response.getError());
     }
 
 
     private void login(String username) {
-        Result<String, ResponseZerokitError> response = zerokit.sync().login(username);
-        assertTrue(!response.isError());
+        Response<String, ResponseZerokitError> response = zerokit.login(username).execute();
+        assertFalse(response.isError(), response.getError());
     }
 
-    private Result<String, ResponseZerokitError> login_noassert(String username) {
-        return zerokit.sync().login(username);
+
+    private Response<String, ResponseZerokitError> login_noassert(String username) {
+        return zerokit.login(username).execute();
     }
 
     private String register(String alias, String password) {
-        Result<ResponseAdminApiInitUserRegistration, ResponseAdminApiError> responseInit = adminApi.sync().initUserRegistration();
-        assertFalse(responseInit.isError());
+        Response<ResponseAdminApiInitUserRegistration, ResponseAdminApiError> responseInit = adminApi.initUserRegistration().execute();
+        assertFalse(responseInit.isError(),responseInit.getError());
         ResponseAdminApiInitUserRegistration resultInit = responseInit.getResult();
-        Result<ResponseZerokitRegister, ResponseZerokitError> responseRegister = zerokit.sync().register(resultInit.getUserId(), resultInit.getRegSessionId(), password.getBytes());
-        assertFalse(responseRegister.isError());
+        Response<ResponseZerokitRegister, ResponseZerokitError> responseRegister = zerokit.register(resultInit.getUserId(), resultInit.getRegSessionId(), password.getBytes()).execute();
+        assertFalse(responseRegister.isError(), responseRegister.getError());
         ResponseZerokitRegister resultRegister = responseRegister.getResult();
-        Result<String, ResponseAdminApiError> responseValidateUser = adminApi.sync().validateUser(resultInit.getUserId(), resultInit.getRegSessionId(), resultInit.getRegSessionVerifier(), resultRegister.getRegValidationVerifier(), alias);
-        assertFalse(responseValidateUser.isError());
+        Response<String, ResponseAdminApiError> responseValidateUser = adminApi.validateUser(resultInit.getUserId(), resultInit.getRegSessionId(), resultInit.getRegSessionVerifier(), resultRegister.getRegValidationVerifier(), alias).execute();
+        assertFalse(responseValidateUser.isError(), responseValidateUser.getError());
         return resultInit.getUserId();
     }
 
 
     private void logout() {
-        Result<String, ResponseZerokitError> response = zerokit.sync().logout();
-        assertFalse(response.isError());
+        Response<String, ResponseZerokitError> response = zerokit.logout().execute();
+        assertFalse(response.isError(), response.getError());
     }
 
     private void logout(boolean deleteRememberMe) {
-        Result<String, ResponseZerokitError> response = zerokit.sync().logout(deleteRememberMe);
-        assertFalse(response.isError());
+        Response<String, ResponseZerokitError> response = zerokit.logout(deleteRememberMe).execute();
+        Assert.assertFalse(response.isError());
     }
 
     private String whoAmI() {
-        Result<String, ResponseZerokitError> response = zerokit.sync().whoAmI();
-        assertFalse(response.isError());
+        Response<String, ResponseZerokitError> response = zerokit.whoAmI().execute();
+        Assert.assertFalse(response.isError());
         return response.getResult();
+    }
+
+    private String getAuthCode(String clientId) {
+        Response<IdentityTokens, ResponseZerokitError> response = zerokit.getIdentityTokens(clientId, true).execute();
+        assertFalse(response.isError(), response.getError());
+        return response.getResult().getAuthorizationCode();
     }
 
 
     private String createTresor() {
-        Result<String, ResponseZerokitError> response = zerokit.sync().createTresor();
-        assertFalse(response.isError());
-        Result<String, ResponseAdminApiError> responseApprove = adminApi.sync().approveTresorCreation(response.getResult());
-        assertFalse(responseApprove.isError());
+        Response<String, ResponseZerokitError> response = zerokit.createTresor().execute();
+        Assert.assertFalse(response.isError());
+        Response<String, ResponseAdminApiError> responseApprove = adminApi.approveTresorCreation(response.getResult()).execute();
+        assertFalse(responseApprove.isError(), responseApprove.getError());
         return response.getResult();
     }
 
     private String decrypt(String textToDecrypt) {
-        Result<String, ResponseZerokitError> response = zerokit.sync().decrypt(textToDecrypt);
-        assertFalse(response.isError());
+        Response<String, ResponseZerokitError> response = zerokit.decrypt(textToDecrypt).execute();
+        Assert.assertFalse(response.isError());
         return response.getResult();
     }
 
-    private Result<String, ResponseZerokitError> decrypt_noassert(String textToDecrypt) {
-        return zerokit.sync().decrypt(textToDecrypt);
+    private Response<String, ResponseZerokitError> decrypt_noassert(String textToDecrypt) {
+        return zerokit.decrypt(textToDecrypt).execute();
     }
 
     private String encrypt(String tresorId, String textToEncrypt) {
-        Result<String, ResponseZerokitError> response = zerokit.sync().encrypt(tresorId, textToEncrypt);
-        assertFalse(response.isError());
+        Response<String, ResponseZerokitError> response = zerokit.encrypt(tresorId, textToEncrypt).execute();
+        Assert.assertFalse(response.isError());
         return response.getResult();
     }
 
 
     private ResponseZerokitInvitationLinkInfo getInvitationLinkInfo(String secret) {
-        Result<ResponseZerokitInvitationLinkInfo, ResponseZerokitError> response = zerokit.sync().getInvitationLinkInfo(secret);
-        assertFalse(response.isError());
+        Response<ResponseZerokitInvitationLinkInfo, ResponseZerokitError> response = zerokit.getInvitationLinkInfo(secret).execute();
+        Assert.assertFalse(response.isError());
         return response.getResult();
     }
 
     private void acceptInvitationLinkNoPassword(String token) {
-        Result<String, ResponseZerokitError> response = zerokit.sync().acceptInvitationLinkNoPassword(token);
-        assertFalse(response.isError());
-        Result<String, ResponseAdminApiError> responseApprove = adminApi.sync().approveInvitationLinkAcception(response.getResult());
-        assertFalse(responseApprove.isError());
+        Response<String, ResponseZerokitError> response = zerokit.acceptInvitationLinkNoPassword(token).execute();
+        Assert.assertFalse(response.isError());
+        Response<String, ResponseAdminApiError> responseApprove = adminApi.approveInvitationLinkAcception(response.getResult()).execute();
+        Assert.assertFalse(responseApprove.isError());
     }
 
     private void acceptInvitationLink(String token, String password) {
-        Result<String, ResponseZerokitError> response = zerokit.sync().acceptInvitationLink(token, password.getBytes());
-        assertFalse(response.isError());
-        Result<String, ResponseAdminApiError> responseApprove = adminApi.sync().approveInvitationLinkAcception(response.getResult());
-        assertFalse(responseApprove.isError());
+        Response<String, ResponseZerokitError> response = zerokit.acceptInvitationLink(token, password.getBytes()).execute();
+        Assert.assertFalse(response.isError());
+        Response<String, ResponseAdminApiError> responseApprove = adminApi.approveInvitationLinkAcception(response.getResult()).execute();
+        Assert.assertFalse(responseApprove.isError());
     }
 
     private void changePassword(String userId, String oldPassword, String newPassword) {
-        Result<String, ResponseZerokitError> response = zerokit.sync().changePassword(userId, oldPassword.getBytes(), newPassword.getBytes());
-        assertFalse(response.isError());
+        Response<String, ResponseZerokitError> response = zerokit.changePassword(userId, oldPassword.getBytes(), newPassword.getBytes()).execute();
+        Assert.assertFalse(response.isError());
     }
 
     private void changePassword(String oldPassword, String newPassword) {
-        Result<String, ResponseZerokitError> response = zerokit.sync().changePassword(oldPassword.getBytes(), newPassword.getBytes());
-        assertFalse(response.isError());
+        Response<String, ResponseZerokitError> response = zerokit.changePassword(oldPassword.getBytes(), newPassword.getBytes()).execute();
+        Assert.assertFalse(response.isError());
     }
 
     private void shareTresor(String tresorId, String userId) {
-        Result<String, ResponseZerokitError> response = zerokit.sync().shareTresor(tresorId, userId);
-        assertFalse(response.isError());
-        Result<String, ResponseAdminApiError> responseApprove = adminApi.sync().approveShare(response.getResult());
-        assertFalse(responseApprove.isError());
+        Response<String, ResponseZerokitError> response = zerokit.shareTresor(tresorId, userId).execute();
+        Assert.assertFalse(response.isError());
+        Response<String, ResponseAdminApiError> responseApprove = adminApi.approveShare(response.getResult()).execute();
+        assertFalse(responseApprove.isError(), responseApprove.getError());
     }
 
     private void kickFromTresor(String tresorId, String userId) {
-        Result<String, ResponseZerokitError> response = zerokit.sync().kickFromTresor(tresorId, userId);
-        assertFalse(response.isError());
-        Result<String, ResponseAdminApiError> responseApprove = adminApi.sync().approveKick(response.getResult());
-        assertFalse(responseApprove.isError());
+        Response<String, ResponseZerokitError> response = zerokit.kickFromTresor(tresorId, userId).execute();
+        Assert.assertFalse(response.isError());
+        Response<String, ResponseAdminApiError> responseApprove = adminApi.approvekick(response.getResult()).execute();
+        assertFalse(responseApprove.isError(), responseApprove.getError());
     }
 
     private String createInvitationLinkNoPassword(String linkBase, String tresorId, String message) {
-        Result<ResponseZerokitCreateInvitationLink, ResponseZerokitError> response = zerokit.sync().createInvitationLinkNoPassword(linkBase, tresorId, message);
-        assertFalse(response.isError());
-        Result<String, ResponseAdminApiError> responseApprove = adminApi.sync().approveCreateInvitationLink(response.getResult().getId());
-        assertFalse(responseApprove.isError());
+        Response<ResponseZerokitCreateInvitationLink, ResponseZerokitError> response = zerokit.createInvitationLinkNoPassword(linkBase, tresorId, message).execute();
+        Assert.assertFalse(response.isError());
+        Response<String, ResponseAdminApiError> responseApprove = adminApi.approveCreateInvitationLink(response.getResult().getId()).execute();
+        Assert.assertFalse(responseApprove.isError());
         return response.getResult().getUrl();
     }
 
     private String createInvitationLink(final String linkBase, final String tresorId, final String message, final String password) {
-        Result<ResponseZerokitCreateInvitationLink, ResponseZerokitError> response = zerokit.sync().createInvitationLink(linkBase, tresorId, message, password.getBytes());
-        assertFalse(response.isError());
-        Result<String, ResponseAdminApiError> responseApprove = adminApi.sync().approveCreateInvitationLink(response.getResult().getId());
-        assertFalse(responseApprove.isError());
+        Response<ResponseZerokitCreateInvitationLink, ResponseZerokitError> response = zerokit.createInvitationLink(linkBase, tresorId, message, password.getBytes()).execute();
+        Assert.assertFalse(response.isError());
+        Response<String, ResponseAdminApiError> responseApprove = adminApi.approveCreateInvitationLink(response.getResult().getId()).execute();
+        Assert.assertFalse(responseApprove.isError());
         return response.getResult().getUrl();
     }
 
