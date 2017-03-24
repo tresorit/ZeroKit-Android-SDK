@@ -1,5 +1,5 @@
 # Change Log
-## [4.0.2] - 2017-03-24
+## [4.0.3] - 2017-03-24
 ### Changed
 - Observable API removed
 - Instead of this you can use sync and async calls with the new API:

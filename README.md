@@ -4,10 +4,10 @@
 The **ZeroKit SDK** for Android is currently under development and is accessible as a preview. We continuously improve the SDK and fix bugs.
 
 You can [sign up for **ZeroKit** here.](https://tresorit.com/zerokit/)
-## Requirements
-**Android SDK**: The Zerokit SDK library is compatible from API 21 (Android 5.0 - Lollipop).
 ## Changelog
 See the [CHANGELOG.md](./CHANGELOG.md) file.
+## Requirements
+**Android SDK**: The Zerokit SDK library is compatible from API 21 (Android 5.0 - Lollipop).
 ## Download
 Add the dependency to `build.gradle`
 ```groovy
