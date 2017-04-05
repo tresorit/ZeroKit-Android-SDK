@@ -242,9 +242,21 @@ public final class Zerokit {
         clientWebView.addPageFinishListener(new PageFinishListener() {
             @Override
             public void onPageFinished(WebView view, String url) {
-                log("JS Zerokit: init", "Init finished");
-                initState = InitState.INIT_FINISHED;
-                clientWebView.removePageFinishListener(this);
+                if (initState == InitState.INITING){
+                    log("JS Zerokit: init", "Init finished");
+                    initState = InitState.INIT_FINISHED;
+                    clientWebView.removePageFinishListener(this);
+                }
+            }
+
+            @Override
+            public void onReceivedError(int errorCode) {
+                switch (errorCode){
+                    case WebViewClient.ERROR_HOST_LOOKUP:
+                        log("JS Zerokit: init", "Init failed: " + errorCode);
+                        initState = InitState.NOT_INITED;
+                        break;
+                }
             }
         });
 
@@ -331,8 +343,18 @@ public final class Zerokit {
                     clientWebView.addPageFinishListener(new PageFinishListener() {
                         @Override
                         public void onPageFinished(WebView view, String url) {
-                            subscriber.onSuccess(null);
-                            clientWebView.removePageFinishListener(this);
+                            if (initState == InitState.INIT_FINISHED) {
+                                subscriber.onSuccess(null);
+                                clientWebView.removePageFinishListener(this);
+                            }
+                        }
+
+                        @Override
+                        public void onReceivedError(int errorCode) {
+                            if (initState == InitState.NOT_INITED) {
+                                subscriber.onFail("Initialization failed");
+                                clientWebView.removePageFinishListener(this);
+                            }
                         }
                     });
 
@@ -401,6 +423,11 @@ public final class Zerokit {
                     observers.remove(id);
                     subscriber.onFail(new ResponseZerokitError("JSONException").toJSON());
                 }
+            }
+        }, new Action1<String>() {
+            @Override
+            public void call(String s) {
+                subscriber.onFail(new ResponseZerokitError(s).toJSON());
             }
         });
     }
@@ -753,6 +780,14 @@ public final class Zerokit {
          * @param url  The url of the page.
          */
         void onPageFinished(@SuppressWarnings("UnusedParameters") WebView view, @SuppressWarnings("UnusedParameters") String url);
+
+        /**
+         * Report an error to the host application. These errors are unrecoverable
+         * (i.e. the main resource is unavailable). The errorCode parameter
+         * corresponds to one of the ERROR_* constants.
+         * @param errorCode The error code corresponding to an ERROR_* value.
+         */
+        void onReceivedError(int errorCode);
     }
 
 
@@ -808,6 +843,24 @@ public final class Zerokit {
                 pageFinishListener.onPageFinished(view, url);
             }
         }
+
+        /**
+         * Report an error to the host application. These errors are unrecoverable
+         * (i.e. the main resource is unavailable). The errorCode parameter
+         * corresponds to one of the ERROR_* constants.
+         * @param view The WebView that is initiating the callback.
+         * @param errorCode The error code corresponding to an ERROR_* value.
+         * @param description A String describing the error.
+         * @param failingUrl The url that failed to load.
+         */
+        @Override
+        public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
+            super.onReceivedError(view, errorCode, description, failingUrl);
+            for (PageFinishListener pageFinishListener : new LinkedList<>(pageFinishListeners)) {
+                pageFinishListener.onReceivedError(errorCode);
+            }
+        }
+
     }
 
     /**
