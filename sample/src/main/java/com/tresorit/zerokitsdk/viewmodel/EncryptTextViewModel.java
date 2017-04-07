@@ -84,6 +84,11 @@ public class EncryptTextViewModel extends BaseObservable {
                 inProgressEncrypt.set(false);
                 textEncrypted.set(encryptedText);
             }
+        }, new Action<ResponseZerokitError>() {
+            @Override
+            public void call(ResponseZerokitError responseZerokitError) {
+                inProgressEncrypt.set(false);
+            }
         });
     }
 

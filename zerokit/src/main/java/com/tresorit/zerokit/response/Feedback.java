@@ -8,7 +8,7 @@ import com.tresorit.zerokit.util.ZerokitJson;
 import java.util.List;
 
 @SuppressWarnings("WeakerAccess")
-public class Feedback extends ZerokitJson{
+public class Feedback extends ZerokitJson {
     private List<String> suggestions;
     private String warning;
 

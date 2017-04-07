@@ -1,0 +1,12 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.tresorit.zerokit">
+
+    <application >
+
+        <meta-data
+            android:name="com.tresorit.zerokitsdk.API_ROOT"
+            android:value="YOUR API ROOT HERE (eg. https://{tenantid}.api.tresorit.io)"/>
+
+    </application>
+
+</manifest>

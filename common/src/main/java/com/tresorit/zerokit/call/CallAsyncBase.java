@@ -1,18 +1,6 @@
 package com.tresorit.zerokit.call;
 
-public class CallAsyncAction<T, S> implements CallAsync<T,S> {
-
-    protected final ActionCallback<T, S> action;
-
-    public CallAsyncAction(ActionCallback<T, S> action) {
-        this.action = action;
-    }
-
-    @Override
-    public void enqueue(Callback<? super T, ? super S> callback) {
-        action.call(callback);
-    }
-
+public abstract class CallAsyncBase<T, S> implements CallAsync<T, S> {
     @Override
     public final void enqueue() {
         enqueue(new Callback<T, S>() {

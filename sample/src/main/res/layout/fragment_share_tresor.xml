@@ -77,7 +77,7 @@
             android:layout_marginTop="16dp"
             android:ems="10"
             android:enabled="@{!safeUnbox(viewmodel.inProgress)}"
-            android:hint="Paste userid or username here"
+            android:hint="Paste username here"
             android:inputType="textEmailAddress"
             android:text="@={viewmodel.userId}"
             android:textSize="14sp"

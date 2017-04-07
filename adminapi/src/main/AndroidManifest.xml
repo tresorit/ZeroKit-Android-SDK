@@ -1,6 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-
-    package="com.tresorit.adminapi">
+    package="com.zerokit.zerokit">
 
     <application android:allowBackup="false">
     </application>

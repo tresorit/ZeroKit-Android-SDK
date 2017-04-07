@@ -1,1 +1,1 @@
-include ':sample', ':zerokit', ':adminapi'
+include ':sample', ':zerokit', ':common', ':adminapi'

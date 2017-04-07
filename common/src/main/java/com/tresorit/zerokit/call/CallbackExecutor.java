@@ -8,6 +8,7 @@ public class CallbackExecutor<T, S> implements Callback<T, S> {
     @SuppressWarnings("WeakerAccess")
     static final Executor EXECUTOR = Executors.newSingleThreadExecutor();
 
+    @SuppressWarnings("WeakerAccess")
     final Callback<? super T, ? super S> callback;
 
     public CallbackExecutor(Callback<? super T, ? super S> callback) {
