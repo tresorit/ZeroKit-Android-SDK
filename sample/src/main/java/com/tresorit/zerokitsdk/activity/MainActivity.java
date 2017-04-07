@@ -27,6 +27,7 @@ import com.tresorit.zerokitsdk.fragment.EncryptFragment;
 import com.tresorit.zerokitsdk.message.CopyEncryptedTextMessage;
 import com.tresorit.zerokitsdk.message.TabSelectMessage;
 import com.tresorit.zerokitsdk.viewmodel.MainViewModel;
+import com.tresorit.zerokit.AdminApi;
 
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
@@ -48,6 +49,10 @@ public class MainActivity extends AppCompatActivity {
     @SuppressWarnings({"WeakerAccess", "CanBeFinal"})
     @Inject
     Zerokit zerokit;
+
+    @SuppressWarnings({"WeakerAccess", "CanBeFinal"})
+    @Inject
+    AdminApi adminApi;
 
     private final EncryptFragment encryptFragment = new EncryptFragment();
     private final DecryptFragment decryptFragment = new DecryptFragment();
@@ -183,6 +188,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void call(String s) {
                 progressDialog.dismiss();
+                adminApi.clearToken();
                 Intent intent = new Intent(MainActivity.this, RootActivity.class);
                 intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
                 MainActivity.this.startActivity(intent);

@@ -11,15 +11,16 @@ import android.graphics.drawable.LayerDrawable;
 import android.text.TextUtils;
 import android.view.View;
 
-import com.tresorit.adminapi.AdminApi;
-import com.tresorit.adminapi.response.ResponseAdminApiError;
-import com.tresorit.adminapi.response.ResponseAdminApiInitUserRegistration;
+import com.tresorit.zerokit.AdminApi;
 import com.tresorit.zerokit.PasswordEditText;
 import com.tresorit.zerokit.Zerokit;
 import com.tresorit.zerokit.call.Action;
+import com.tresorit.zerokit.response.ResponseAdminApiError;
+import com.tresorit.zerokit.response.ResponseAdminApiInitUserRegistration;
 import com.tresorit.zerokit.response.ResponseZerokitError;
 import com.tresorit.zerokit.response.ResponseZerokitPasswordStrength;
 import com.tresorit.zerokit.response.ResponseZerokitRegister;
+import com.tresorit.zerokit.util.JSONObject;
 import com.tresorit.zerokitsdk.R;
 import com.tresorit.zerokitsdk.message.ShowMessageMessage;
 
@@ -70,7 +71,7 @@ public class RegistrationViewModel extends BaseObservable {
     @SuppressWarnings("WeakerAccess")
     public final View.OnFocusChangeListener focusChangeListener;
 
-    private final int colorRes[];
+    final int colorRes[];
 
     @Inject
     public RegistrationViewModel(final Zerokit zerokit, AdminApi adminApi, final EventBus eventBus, SharedPreferences sharedPreferences, final Resources resources) {
@@ -98,7 +99,7 @@ public class RegistrationViewModel extends BaseObservable {
             @Override
             public void call(ResponseAdminApiError responseAdminApiError) {
                 inProgress.set(false);
-                eventBus.post(new ShowMessageMessage(responseAdminApiError.getErrorMessage()));
+                eventBus.post(new ShowMessageMessage(responseAdminApiError.getMessage()));
             }
         };
         errorResponseHandlerSdk = new Action<ResponseZerokitError>() {
@@ -147,15 +148,19 @@ public class RegistrationViewModel extends BaseObservable {
 
     private void registration(final String alias, final PasswordEditText.PasswordExporter passwordExporter) {
         inProgress.set(true);
-        Action<ResponseAdminApiInitUserRegistration> responseAdminApiInitUserRegistrationAction = new Action<ResponseAdminApiInitUserRegistration>() {
+        adminApi.initReg(alias, new JSONObject()
+                .put("autoValidate", true)
+                .put("canCreateTresor", true)
+                .put("alias", alias)
+                .toString()).enqueue(new Action<ResponseAdminApiInitUserRegistration>() {
             @Override
             public void call(final ResponseAdminApiInitUserRegistration initUserRegistrationResponse) {
-                Action<ResponseZerokitRegister> responseZerokitRegisterAction = new Action<ResponseZerokitRegister>() {
+                zerokit.register(initUserRegistrationResponse.getUserId(), initUserRegistrationResponse.getRegSessionId(), passwordExporter).enqueue(new Action<ResponseZerokitRegister>() {
                     @Override
                     public void call(ResponseZerokitRegister responseZerokitRegister) {
-                        Action<String> response = new Action<String>() {
+                        adminApi.finishReg(initUserRegistrationResponse.getUserId(), responseZerokitRegister.getRegValidationVerifier()).enqueue(new Action<Void>() {
                             @Override
-                            public void call(String s) {
+                            public void call(Void s) {
                                 sharedPreferences.edit().putString(alias, initUserRegistrationResponse.getUserId()).apply();
                                 inProgress.set(false);
                                 RegistrationViewModel.this.userName.set("");
@@ -163,14 +168,10 @@ public class RegistrationViewModel extends BaseObservable {
                                 passwordExporterConfirm.clear();
                                 eventBus.post(new ShowMessageMessage("Successful sign up"));
                             }
-                        };
-                        adminApi.validateUser(initUserRegistrationResponse.getUserId(), initUserRegistrationResponse.getRegSessionId(), initUserRegistrationResponse.getRegSessionVerifier(), responseZerokitRegister.getRegValidationVerifier(), alias).enqueue(response, errorResponseHandlerAdmin);
+                        }, errorResponseHandlerAdmin);
                     }
-                };
-                zerokit.register(initUserRegistrationResponse.getUserId(), initUserRegistrationResponse.getRegSessionId(), passwordExporter).enqueue(responseZerokitRegisterAction, errorResponseHandlerSdk);
+                }, errorResponseHandlerSdk);
             }
-        };
-        adminApi.initUserRegistration().enqueue(responseAdminApiInitUserRegistrationAction,
-                errorResponseHandlerAdmin);
+        }, errorResponseHandlerAdmin);
     }
 }

@@ -3,7 +3,7 @@ package com.tresorit.zerokit.response;
 import com.tresorit.zerokit.util.JSONObject;
 import com.tresorit.zerokit.util.ZerokitJson;
 
-public class ResponseZerokitPasswordStrength extends ZerokitJson{
+public class ResponseZerokitPasswordStrength extends ZerokitJson {
     private CrackTimesSeconds crack_times_seconds;
     private Feedback feedback;
     private double guesses_log10;

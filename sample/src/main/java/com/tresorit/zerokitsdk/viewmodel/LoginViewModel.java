@@ -1,14 +1,17 @@
 package com.tresorit.zerokitsdk.viewmodel;
 
-import android.content.SharedPreferences;
 import android.databinding.BaseObservable;
 import android.databinding.ObservableField;
 import android.text.TextUtils;
 import android.view.View;
 
+import com.tresorit.zerokit.AdminApi;
 import com.tresorit.zerokit.PasswordEditText;
 import com.tresorit.zerokit.Zerokit;
 import com.tresorit.zerokit.call.Action;
+import com.tresorit.zerokit.response.IdentityTokens;
+import com.tresorit.zerokit.response.ResponseAdminApiError;
+import com.tresorit.zerokit.response.ResponseAdminApiLoginByCode;
 import com.tresorit.zerokit.response.ResponseZerokitError;
 import com.tresorit.zerokit.response.ResponseZerokitLogin;
 import com.tresorit.zerokitsdk.message.LoginFinisedMessage;
@@ -37,20 +40,24 @@ public class LoginViewModel extends BaseObservable {
     @SuppressWarnings("WeakerAccess")
     public final PasswordEditText.PasswordExporter passwordExporter;
 
-    private final Zerokit zerokit;
+    @SuppressWarnings("WeakerAccess")
+    final Zerokit zerokit;
+    @SuppressWarnings("WeakerAccess")
+    final AdminApi adminApi;
 
     @SuppressWarnings("WeakerAccess")
     final EventBus eventBus;
 
-    private final SharedPreferences sharedPreferences;
-
-    private final Action<ResponseZerokitError> errorResponseHandlerSdk;
+    @SuppressWarnings("WeakerAccess")
+    final Action<ResponseZerokitError> errorResponseHandlerSdk;
+    @SuppressWarnings("WeakerAccess")
+    final Action<ResponseAdminApiError> errorResponseHandlerAdminapi;
 
     @Inject
-    public LoginViewModel(Zerokit zerokit, final EventBus eventBus, SharedPreferences sharedPreferences) {
+    public LoginViewModel(Zerokit zerokit, AdminApi adminApi, final EventBus eventBus) {
         this.zerokit = zerokit;
+        this.adminApi = adminApi;
         this.eventBus = eventBus;
-        this.sharedPreferences = sharedPreferences;
 
         this.passwordExporter = new PasswordEditText.PasswordExporter();
 
@@ -69,7 +76,14 @@ public class LoginViewModel extends BaseObservable {
             @Override
             public void call(ResponseZerokitError errorResponse) {
                 inProgress.set(false);
-                eventBus.post(new ShowMessageMessage(errorResponse.getDescription()));
+                eventBus.post(new ShowMessageMessage(errorResponse.toString()));
+            }
+        };
+        errorResponseHandlerAdminapi = new Action<ResponseAdminApiError>() {
+            @Override
+            public void call(ResponseAdminApiError errorResponse) {
+                inProgress.set(false);
+                eventBus.post(new ShowMessageMessage(errorResponse.toString()));
             }
         };
         focusChangeListener = new View.OnFocusChangeListener() {
@@ -88,20 +102,30 @@ public class LoginViewModel extends BaseObservable {
         else login(userName.get(), passwordExporter);
     }
 
-    private void login(String username, PasswordEditText.PasswordExporter passwordExporter) {
+    private void login(String username, final PasswordEditText.PasswordExporter passwordExporter) {
         inProgress.set(true);
-        String userId = sharedPreferences.getString(username, "");
-        if (TextUtils.isEmpty(userId)) {
-            inProgress.set(false);
-            eventBus.post(new ShowMessageMessage("No user id found for this user alias"));
-        } else {
-            zerokit.login(userId, passwordExporter).enqueue(new Action<ResponseZerokitLogin>() {
-                @Override
-                public void call(ResponseZerokitLogin responseLogin) {
-                    inProgress.set(false);
-                    eventBus.post(new LoginFinisedMessage());
-                }
-            }, errorResponseHandlerSdk);
-        }
+        adminApi.getUserId(username).enqueue(new Action<String>() {
+            @Override
+            public void call(String userId) {
+                zerokit.login(userId, passwordExporter).enqueue(new Action<ResponseZerokitLogin>() {
+                    @Override
+                    public void call(ResponseZerokitLogin responseLogin) {
+                        zerokit.getIdentityTokens(adminApi.getClientId()).enqueue(new Action<IdentityTokens>() {
+                            @Override
+                            public void call(IdentityTokens identityTokens) {
+                                adminApi.login(identityTokens.getAuthorizationCode()).enqueue(new Action<ResponseAdminApiLoginByCode>() {
+                                    @Override
+                                    public void call(ResponseAdminApiLoginByCode responseAdminApiLoginByCode) {
+                                        adminApi.setToken(responseAdminApiLoginByCode.getId());
+                                        inProgress.set(false);
+                                        eventBus.post(new LoginFinisedMessage());
+                                    }
+                                }, errorResponseHandlerAdminapi);
+                            }
+                        }, errorResponseHandlerSdk);
+                    }
+                }, errorResponseHandlerSdk);
+            }
+        }, errorResponseHandlerAdminapi);
     }
 }

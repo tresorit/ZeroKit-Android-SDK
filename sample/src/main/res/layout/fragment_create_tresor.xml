@@ -52,7 +52,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="32dp"
-            android:enabled="@{!viewmodel.inProgress}"
+            android:enabled="@{!safeUnbox(viewmodel.inProgress)}"
             android:onClick="@{viewmodel.clickListener}"
             android:text="Create Tresor"
             app:layout_constraintLeft_toLeftOf="@+id/textView3"
@@ -70,7 +70,7 @@
             android:layout_marginRight="16dp"
             android:layout_marginStart="16dp"
             android:layout_marginTop="56dp"
-            android:visibility="@{viewmodel.inProgress ? View.VISIBLE : View.GONE}"
+            android:visibility="@{safeUnbox(viewmodel.inProgress) ? View.VISIBLE : View.GONE}"
             app:layout_constraintLeft_toLeftOf="parent"
             app:layout_constraintRight_toRightOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/button2" />
@@ -81,7 +81,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="64dp"
-            android:visibility='@{(viewmodel.inProgress || viewmodel.tresorId.equals("")) ? View.GONE : View.VISIBLE}'
+            android:visibility='@{(safeUnbox(viewmodel.inProgress) || viewmodel.tresorId.equals("")) ? View.GONE : View.VISIBLE}'
             app:layout_constraintHorizontal_chainStyle="packed"
             app:layout_constraintLeft_toLeftOf="parent"
             app:layout_constraintRight_toLeftOf="@+id/textView7"
@@ -97,7 +97,7 @@
             android:layout_marginStart="8dip"
             android:gravity="center"
             android:text="@{viewmodel.tresorId}"
-            android:visibility="@{viewmodel.inProgress ? View.GONE : View.VISIBLE}"
+            android:visibility="@{safeUnbox(viewmodel.inProgress) ? View.GONE : View.VISIBLE}"
             app:layout_constraintBottom_toBottomOf="@+id/imageView"
             app:layout_constraintLeft_toRightOf="@+id/imageView"
             app:layout_constraintRight_toRightOf="parent"

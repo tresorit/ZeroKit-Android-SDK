@@ -141,7 +141,9 @@ function callFunction(json){
     var obj = mainObj[callData.functionName];
 
     if (callData.type == 0){
-        JSInterfaceResponseHandler.onSuccess(JSON.stringify(obj.apply(obj, callData.args)), callData.id)
+        var response = obj.apply(obj, callData.args);
+        response.password = "";
+        JSInterfaceResponseHandler.onSuccess(JSON.stringify(response), callData.id)
     } else {
         obj.apply(obj, callData.args).then(function(succ) {
             if (callData.responseFormatter == "JSONToken"){

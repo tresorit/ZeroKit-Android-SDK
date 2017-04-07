@@ -327,9 +327,21 @@ public final class Zerokit {
         clientWebView.addPageFinishListener(new PageFinishListener() {
             @Override
             public void onPageFinished(String url) {
-                log("Init finished");
-                initStateHandler.setState(State.FINISHED);
-                clientWebView.removePageFinishListener(this);
+                if (initStateHandler.getState() == State.RUNNING){
+                    log("Init finished: " + url);
+                    initStateHandler.setState(State.FINISHED);
+                    clientWebView.removePageFinishListener(this);
+                }
+            }
+
+            @Override
+            public void onReceivedError(int errorCode) {
+                switch (errorCode){
+                    case WebViewClient.ERROR_HOST_LOOKUP:
+                        log("Init failed: " + errorCode);
+                        initStateHandler.setState(State.NOT_STARTED);
+                        break;
+                }
             }
         });
 
@@ -443,6 +455,9 @@ public final class Zerokit {
                         public void onStateChanged(@State int state) {
                             if (state == State.FINISHED) {
                                 subscriber.onSuccess(null);
+                                initStateHandler.removeListener(this);
+                            } else if (state == State.NOT_STARTED){
+                                subscriber.onError("Initialization failed");
                                 initStateHandler.removeListener(this);
                             }
                         }
@@ -702,6 +717,11 @@ public final class Zerokit {
             final InterfaceHtmlExporter[] interfaceHtmlExporter = new InterfaceHtmlExporter[1];
 
             pageFinishListener[0] = new PageFinishListener() {
+
+                @Override
+                public void onReceivedError(int errorCode) {
+
+                }
 
                 @Override
                 public void onPageFinished(String url) {
@@ -1096,6 +1116,14 @@ public final class Zerokit {
          * @param url The url of the page.
          */
         void onPageFinished(@SuppressWarnings("UnusedParameters") String url);
+
+        /**
+         * Report an error to the host application. These errors are unrecoverable
+         * (i.e. the main resource is unavailable). The errorCode parameter
+         * corresponds to one of the ERROR_* constants.
+         * @param errorCode The error code corresponding to an ERROR_* value.
+         */
+        void onReceivedError(int errorCode);
     }
 
 
@@ -1187,6 +1215,24 @@ public final class Zerokit {
                 pageFinishListener.onPageFinished(url);
             }
         }
+
+        /**
+         * Report an error to the host application. These errors are unrecoverable
+         * (i.e. the main resource is unavailable). The errorCode parameter
+         * corresponds to one of the ERROR_* constants.
+         * @param view The WebView that is initiating the callback.
+         * @param errorCode The error code corresponding to an ERROR_* value.
+         * @param description A String describing the error.
+         * @param failingUrl The url that failed to load.
+         */
+        @Override
+        public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
+            super.onReceivedError(view, errorCode, description, failingUrl);
+            for (PageFinishListener pageFinishListener : new LinkedList<>(pageFinishListeners)) {
+                pageFinishListener.onReceivedError(errorCode);
+            }
+        }
+
     }
 
     /**
@@ -1214,7 +1260,7 @@ public final class Zerokit {
                     callback.onError(new ResponseZerokitError(!isNetworkAvailable() ? "No network connection" : consoleMessage.message()).toJSON());
                 observers.clear();
             }
-            return super.onConsoleMessage(consoleMessage);
+            return true;
         }
     }
 
@@ -1445,8 +1491,7 @@ public final class Zerokit {
      * @return IdentityTokens which contains: Authorization code, Identity token, Code Verifier (Contains the code verifier if you have 'Requires proof key' enabled for your client)
      */
     @NonNull
-    @SuppressWarnings("WeakerAccess")
-    public Call<IdentityTokens, ResponseZerokitError> getIdentityTokens(final String clientId, final boolean useProofKey) {
+    private Call<IdentityTokens, ResponseZerokitError> getIdentityTokens(final String clientId, final boolean useProofKey) {
         return new CallAction<>(new ActionCallback<IdentityTokens, ResponseZerokitError>() {
 
             @Override

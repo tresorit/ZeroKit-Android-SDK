@@ -1,9 +1,9 @@
 package com.tresorit.zerokitsdk.module;
 
-import com.tresorit.adminapi.AdminApi;
 import com.tresorit.zerokit.Zerokit;
 import com.tresorit.zerokitsdk.scopes.ActivityScope;
 import com.tresorit.zerokitsdk.viewmodel.CreateTresorViewModel;
+import com.tresorit.zerokit.AdminApi;
 
 import org.greenrobot.eventbus.EventBus;
 

@@ -1,5 +1,4 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
-
 buildscript {
     repositories {
         jcenter()
@@ -14,6 +13,7 @@ allprojects {
         jcenter()
     }
 
+    /** To avoid writing this in every android module */
     project.ext {
         compileSdkVersion = 25
         buildToolsVersion = "25.0.2"
@@ -21,7 +21,7 @@ allprojects {
         targetSdkVersion = 25
         versionCode = 1
         versionName = "1.0"
-        appcompatVersion = "25.3.0"
+        appcompatVersion = "25.3.1"
     }
 }
 
