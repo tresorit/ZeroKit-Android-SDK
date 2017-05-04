@@ -7,6 +7,10 @@ import android.support.test.runner.AndroidJUnit4;
 
 import com.tresorit.zerokit.call.Response;
 import com.tresorit.zerokit.response.IdentityTokens;
+import com.tresorit.zerokit.response.ResponseAdminApiError;
+import com.tresorit.zerokit.response.ResponseAdminApiInitUserRegistration;
+import com.tresorit.zerokit.response.ResponseAdminApiLoginByCode;
+import com.tresorit.zerokit.response.ResponseZerokitChangePassword;
 import com.tresorit.zerokit.response.ResponseZerokitError;
 import com.tresorit.zerokit.response.ResponseZerokitInvitationLinkInfo;
 import com.tresorit.zerokit.response.ResponseZerokitLogin;
@@ -74,11 +78,14 @@ public class InstrumentedTest {
         return String.format("%s-%s", userName, UUID.randomUUID());
     }
 
-    public void testIdp() {
+    @Test
+    public void testEncrypteDecrypt () {
         String pass01 = USER_01_PASS;
-        String user01 = registrationTest(USER_01_ALIAS, pass01);
+        String user01 = getUserName(USER_01_ALIAS);
+        user01 = registrationTest(user01, pass01);
 
         loginTest(user01, pass01);
+        encryptTest(createTresor(), "\"{\"\\}");
 
         logoutTest();
     }
@@ -615,13 +622,13 @@ public class InstrumentedTest {
 //    }
 
     private void changePassword(String userId, String oldPassword, String newPassword) {
-        Response<String, ResponseZerokitError> response = zerokit.changePassword(userId, oldPassword.getBytes(), newPassword.getBytes()).execute();
-        Assert.assertFalse(response.isError());
+        Response<ResponseZerokitChangePassword, ResponseZerokitError> response = zerokit.changePassword(userId, oldPassword.getBytes(), newPassword.getBytes()).execute();
+        assertFalse(response.isError(), response.getError());
     }
 
     private void changePassword(String oldPassword, String newPassword) {
-        Response<String, ResponseZerokitError> response = zerokit.changePassword(oldPassword.getBytes(), newPassword.getBytes()).execute();
-        Assert.assertFalse(response.isError());
+        Response<ResponseZerokitChangePassword, ResponseZerokitError> response = zerokit.changePassword(oldPassword.getBytes(), newPassword.getBytes()).execute();
+        assertFalse(response.isError(), response.getError());
     }
 
     private void shareTresor(String tresorId, String userId) {

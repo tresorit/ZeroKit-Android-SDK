@@ -33,6 +33,7 @@ import com.tresorit.zerokit.call.CallAsyncAction;
 import com.tresorit.zerokit.call.Callback;
 import com.tresorit.zerokit.call.CallbackExecutor;
 import com.tresorit.zerokit.response.IdentityTokens;
+import com.tresorit.zerokit.response.ResponseZerokitChangePassword;
 import com.tresorit.zerokit.response.ResponseZerokitCreateInvitationLink;
 import com.tresorit.zerokit.response.ResponseZerokitError;
 import com.tresorit.zerokit.response.ResponseZerokitInvitationLinkInfo;
@@ -45,6 +46,7 @@ import com.tresorit.zerokit.util.ZerokitJson;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.json.JSONTokener;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -1354,7 +1356,12 @@ public final class Zerokit {
         @Override
         @NonNull
         String getResult(@NonNull String result) {
-            return result.replaceAll("\"", "");
+            if (!"null".equals(result)) try {
+                return (String) new JSONTokener(result).nextValue();
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+            return result;
         }
     }
 
@@ -1456,11 +1463,11 @@ public final class Zerokit {
      */
     @NonNull
     @SuppressWarnings("WeakerAccess")
-    CallAsync<String, ResponseZerokitError> _changePassword(@NonNull final String userId, @NonNull final byte[] oldPassword, @NonNull final byte[] newPassword) {
-        return new CallAsyncAction<>(new ActionCallback<String, ResponseZerokitError>() {
+    CallAsync<ResponseZerokitChangePassword, ResponseZerokitError> _changePassword(@NonNull final String userId, @NonNull final byte[] oldPassword, @NonNull final byte[] newPassword) {
+        return new CallAsyncAction<>(new ActionCallback<ResponseZerokitChangePassword, ResponseZerokitError>() {
             @Override
-            public void call(Callback<? super String, ? super ResponseZerokitError> subscriber) {
-                Zerokit.this.callFunction(Function.changePassword, new CallbackStringResult(subscriber, jsInterfaceByteArrayProvider.add(oldPassword), jsInterfaceByteArrayProvider.add(newPassword)), userId);
+            public void call(Callback<? super ResponseZerokitChangePassword, ? super ResponseZerokitError> subscriber) {
+                Zerokit.this.callFunction(Function.changePassword, new CallbackJsonResult<>(subscriber, new ResponseZerokitChangePassword(), jsInterfaceByteArrayProvider.add(oldPassword), jsInterfaceByteArrayProvider.add(newPassword)), userId);
             }
         });
     }
@@ -1931,10 +1938,10 @@ public final class Zerokit {
      */
     @SuppressWarnings("WeakerAccess")
     @NonNull
-    public Call<String, ResponseZerokitError> changePassword(@Nullable final String userId, @NonNull final byte[] oldPassword, @NonNull final byte[] newPassword) {
-        return new CallAction<>(new ActionCallback<String, ResponseZerokitError>() {
+    public Call<ResponseZerokitChangePassword, ResponseZerokitError> changePassword(@Nullable final String userId, @NonNull final byte[] oldPassword, @NonNull final byte[] newPassword) {
+        return new CallAction<>(new ActionCallback<ResponseZerokitChangePassword, ResponseZerokitError>() {
             @Override
-            public void call(final Callback<? super String, ? super ResponseZerokitError> subscriber) {
+            public void call(final Callback<? super ResponseZerokitChangePassword, ? super ResponseZerokitError> subscriber) {
                 final Action<ResponseZerokitError> onFail = new Action<ResponseZerokitError>() {
                     @Override
                     public void call(ResponseZerokitError responseZerokitError) {
@@ -1946,9 +1953,9 @@ public final class Zerokit {
                 Action<String> onSuccessWhoAmI = new Action<String>() {
                     @Override
                     public void call(final String userId_) {
-                        _changePassword(userId_, oldPassword, newPassword).enqueue(new Action<String>() {
+                        _changePassword(userId_, oldPassword, newPassword).enqueue(new Action<ResponseZerokitChangePassword>() {
                             @Override
-                            public void call(final String changePasswordResult) {
+                            public void call(final ResponseZerokitChangePassword changePasswordResult) {
                                 if (getSecret(KEY_STORE_ALIAS) != null) {
                                     _getRememberMeKey(userId_, newPassword).enqueue(new Action<String>() {
                                         @Override
@@ -1985,7 +1992,7 @@ public final class Zerokit {
      */
     @SuppressWarnings("WeakerAccess")
     @NonNull
-    public Call<String, ResponseZerokitError> changePassword(@NonNull final byte[] oldPassword, @NonNull final byte[] newPassword) {
+    public Call<ResponseZerokitChangePassword, ResponseZerokitError> changePassword(@NonNull final byte[] oldPassword, @NonNull final byte[] newPassword) {
         return changePassword(null, oldPassword, newPassword);
     }
 
@@ -1999,7 +2006,7 @@ public final class Zerokit {
      */
     @SuppressWarnings("WeakerAccess")
     @NonNull
-    public Call<String, ResponseZerokitError> changePassword(@NonNull final String userId, @NonNull final PasswordEditText passwordEditTextOld, @NonNull PasswordEditText passwordEditTextNew) {
+    public Call<ResponseZerokitChangePassword, ResponseZerokitError> changePassword(@NonNull final String userId, @NonNull final PasswordEditText passwordEditTextOld, @NonNull PasswordEditText passwordEditTextNew) {
         return changePassword(userId, passwordEditTextOld.getPasswordExporter(), passwordEditTextNew.getPasswordExporter());
     }
 
@@ -2012,7 +2019,7 @@ public final class Zerokit {
      */
     @SuppressWarnings("WeakerAccess")
     @NonNull
-    public Call<String, ResponseZerokitError> changePassword(@NonNull final PasswordEditText passwordEditTextOld, @NonNull PasswordEditText passwordEditTextNew) {
+    public Call<ResponseZerokitChangePassword, ResponseZerokitError> changePassword(@NonNull final PasswordEditText passwordEditTextOld, @NonNull PasswordEditText passwordEditTextNew) {
         return changePassword(passwordEditTextOld.getPasswordExporter(), passwordEditTextNew.getPasswordExporter());
     }
 
@@ -2026,7 +2033,7 @@ public final class Zerokit {
      */
     @SuppressWarnings("WeakerAccess")
     @NonNull
-    public Call<String, ResponseZerokitError> changePassword(@NonNull final String userId, @NonNull final PasswordEditText.PasswordExporter passwordExporterOld, @NonNull PasswordEditText.PasswordExporter passwordExporterNew) {
+    public Call<ResponseZerokitChangePassword, ResponseZerokitError> changePassword(@NonNull final String userId, @NonNull final PasswordEditText.PasswordExporter passwordExporterOld, @NonNull PasswordEditText.PasswordExporter passwordExporterNew) {
         return changePassword(userId, toBytes(passwordExporterOld.getCharArray(true)), toBytes(passwordExporterNew.getCharArray(true)));
     }
 
@@ -2039,7 +2046,7 @@ public final class Zerokit {
      */
     @SuppressWarnings("WeakerAccess")
     @NonNull
-    public Call<String, ResponseZerokitError> changePassword(@NonNull final PasswordEditText.PasswordExporter passwordExporterOld, @NonNull PasswordEditText.PasswordExporter passwordExporterNew) {
+    public Call<ResponseZerokitChangePassword, ResponseZerokitError> changePassword(@NonNull final PasswordEditText.PasswordExporter passwordExporterOld, @NonNull PasswordEditText.PasswordExporter passwordExporterNew) {
         return changePassword(toBytes(passwordExporterOld.getCharArray(true)), toBytes(passwordExporterNew.getCharArray(true)));
     }
 

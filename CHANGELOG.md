@@ -1,4 +1,8 @@
 # Change Log
+## [4.1.1] - 2017-05-04
+
+### Fix
+- JSON escaping issue
 
 ## [4.1.0] - 2017-04-06
 
