@@ -1,9 +1,9 @@
 package com.tresorit.zerokit;
 
 import android.content.Context;
-import android.content.pm.PackageManager;
 import android.support.test.InstrumentationRegistry;
 import android.support.test.runner.AndroidJUnit4;
+import android.text.TextUtils;
 
 import com.tresorit.zerokit.call.Response;
 import com.tresorit.zerokit.response.IdentityTokens;
@@ -19,14 +19,13 @@ import com.tresorit.zerokit.util.JSONObject;
 
 import junit.framework.Assert;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import java.util.Properties;
 import java.util.UUID;
 
-import static com.tresorit.zerokit.Zerokit.API_ROOT;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
@@ -41,31 +40,51 @@ public class InstrumentedTest {
     static private Zerokit zerokit;
     static private AdminApi adminApi;
 
+    static private String pass01;
+    static private String user01;
+    static private String pass02;
+    static private String user02;
+
     @Before
     public void init() throws Throwable {
-
         Context targetContext = InstrumentationRegistry.getTargetContext();
         if (adminApi == null) {
-            Properties properties = new Properties();
-            properties.load(targetContext.getAssets().open("zerokit.properties"));
-            adminApi = new AdminApi(properties.getProperty("appbackend", ""), properties.getProperty("clientid", ""));
+            adminApi = new AdminApi(BuildConfig.APP_BACKEND, BuildConfig.CLIENT_ID);
         }
 
         if (zerokit == null) {
-            try {
-                String url = targetContext.getPackageManager().getApplicationInfo(targetContext.getPackageName(), PackageManager.GET_META_DATA).metaData.getString(API_ROOT);
-                Zerokit.init(targetContext, url);
-                zerokit = Zerokit.getInstance();
-            } catch (PackageManager.NameNotFoundException e) {
-                throw new IllegalStateException("No ApiRoot definition found in the AndroidManifest.xml");
-            }
+            Zerokit.init(targetContext, BuildConfig.API_ROOT);
+            zerokit = Zerokit.getInstance();
         }
 
         assertNotNull(adminApi);
         assertNotNull(zerokit);
-        adminApi.clearToken();
-        logout();
-        assertEquals(whoAmI(), "null");
+
+        logoutTest();
+        initUsers();
+
+        loginTest(user01, pass01);
+    }
+
+    private void initUsers() {
+        if (TextUtils.isEmpty(user01) && TextUtils.isEmpty(user02)){
+            pass01 = USER_01_PASS;
+            user01 = registrationTest(getUserName(USER_01_ALIAS), pass01);
+            pass02 = USER_02_PASS;
+            user02 = registrationTest(getUserName(USER_02_ALIAS), pass02);
+        }
+
+        Assert.assertFalse(TextUtils.isEmpty(user01));
+        Assert.assertFalse(TextUtils.isEmpty(user02));
+        Assert.assertFalse(TextUtils.isEmpty(pass01));
+        Assert.assertFalse(TextUtils.isEmpty(pass02));
+
+        logoutTest();
+    }
+
+    @After
+    public void after(){
+        logoutTest();
     }
 
 
@@ -80,126 +99,50 @@ public class InstrumentedTest {
 
     @Test
     public void testEncrypteDecrypt () {
-        String pass01 = USER_01_PASS;
-        String user01 = getUserName(USER_01_ALIAS);
-        user01 = registrationTest(user01, pass01);
-
-        loginTest(user01, pass01);
-        encryptTest(createTresor(), "\"{\"\\}");
-
-        logoutTest();
-    }
-
-    @Test
-    public void testLogin() {
-        String pass01 = USER_01_PASS;
-        String user01 = getUserName(USER_01_ALIAS);
-        user01 = registrationTest(user01, pass01);
-
-        loginTest(user01, pass01);
-
-        logoutTest();
+        encryptTest(createTresor(), "\"");
     }
 
     @Test
     public void testChangePasswordLoggedIn() {
-        String pass01 = USER_01_PASS;
-        String user01 = registrationTest(getUserName(USER_01_ALIAS), pass01);
-
-        loginTest(user01, pass01);
-
         changePasswordTestWithLoggedIn(user01, pass01);
-
-        logoutTest();
     }
 
     @Test
     public void testChangePasswordLoggedOut() {
-        String pass01 = USER_01_PASS;
-        String user01 = registrationTest(getUserName(USER_01_ALIAS), pass01);
-
-        loginTest(user01, pass01);
-
         changePasswordTestWithLoggedOut(user01, pass01);
-
-        logoutTest();
     }
 
     @Test
     public void testCreateTresorAndEncryptText() {
-        String pass01 = USER_01_PASS;
-        String user01 = registrationTest(getUserName(USER_01_ALIAS), pass01);
-
-        loginTest(user01, pass01);
-
-        String tresor01 = createTresor();
-
-        String textToEncrypt01 = "textToEncrypt01";
-        encryptTest(tresor01, textToEncrypt01);
-
-        logoutTest();
+        encryptTest(createTresor(), "textToEncrypt01");
     }
 
     @Test
     public void testShareTresorAndDecryptText() {
-        String pass01 = USER_01_PASS;
-        String user01 = registrationTest(getUserName(USER_01_ALIAS), pass01);
-        String pass02 = USER_02_PASS;
-        String user02 = registrationTest(getUserName(USER_02_ALIAS), pass02);
-
-        loginTest(user01, pass01);
-
         String tresor01 = createTresor();
-
         String textToEncrypt01 = "textToEncrypt01";
         String cipherText01 = encryptTest(tresor01, textToEncrypt01);
-
         shareTresor(tresor01, user02);
-
         logoutTest();
-
         loginTest(user02, pass02);
-
         assertEquals(decrypt(cipherText01), textToEncrypt01);
-
-        logoutTest();
     }
 
     @Test
     public void testKickFromTresorAndTryDecryptText() {
-        String pass01 = USER_01_PASS;
-        String user01 = registrationTest(getUserName(USER_01_ALIAS), pass01);
-        String pass02 = USER_02_PASS;
-        String user02 = registrationTest(getUserName(USER_02_ALIAS), pass02);
-
-        loginTest(user01, pass01);
-
         String tresor01 = createTresor();
-
         String textToEncrypt01 = "textToEncrypt01";
         String cipherText01 = encryptTest(tresor01, textToEncrypt01);
-
         shareTresor(tresor01, user02);
-
         logoutTest();
-
         loginTest(user02, pass02);
-
         assertEquals(decrypt(cipherText01), textToEncrypt01);
-
         logoutTest();
-
         loginTest(user01, pass01);
-
         kickFromTresor(tresor01, user02);
-
         logoutTest();
-
         loginTest(user02, pass02);
-
         Assert.assertTrue(decrypt_noassert(cipherText01).isError());
-
-        logoutTest();
     }
 
     public void testShareTresorWithLinkAndDecryptText() {
@@ -332,9 +275,6 @@ public class InstrumentedTest {
 
     @Test
     public void testLoginWithRememberMe() {
-        String pass01 = USER_01_PASS;
-        String user01 = registrationTest(getUserName(USER_01_ALIAS), pass01);
-
         loginTest(user01, pass01, true);
 
         logoutTest(false);
@@ -350,9 +290,6 @@ public class InstrumentedTest {
 
     @Test
     public void testLoginWithRememberMeAndChangePassword() {
-        String pass01 = USER_01_PASS;
-        String user01 = registrationTest(getUserName(USER_01_ALIAS), pass01);
-
         loginTest(user01, pass01, true);
 
         changePasswordTestSmall(pass01);

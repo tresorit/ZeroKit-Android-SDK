@@ -1,0 +1,35 @@
+language: android
+jdk: oraclejdk8
+env:
+  global:
+  - ANDROID_ABI=armeabi-v7a
+  - ANDROID_API_LEVEL=22
+  - EMULATOR_API_LEVEL=22
+  - ANDROID_BUILD_TOOLS_VERSION=22.0.1
+  - ADB_INSTALL_TIMEOUT=5 # minutes
+android:
+  components:
+  - tools
+  - tools
+  - platform-tools
+  - build-tools-$ANDROID_BUILD_TOOLS_VERSION
+  - android-$ANDROID_API_LEVEL
+  - android-$EMULATOR_API_LEVEL
+#  - extra-android-m2repository
+#  - extra-android-m2repository # for design library
+  - sys-img-$ANDROID_ABI-"android-"$EMULATOR_API_LEVEL
+  licenses:
+   - android-sdk-preview-license-.+
+   - android-sdk-license-.+
+before_install:
+  - mkdir "$ANDROID_HOME/licenses" || true
+  - echo -e "\n8933bad161af4178b1185d1a37fbf41ea5269c55" > "$ANDROID_HOME/licenses/android-sdk-license"
+  - echo -e "\n84831b9409646a918e30573bab4c9c91346d8abd" > "$ANDROID_HOME/licenses/android-sdk-preview-license"
+  - chmod +x gradlew
+before_script:
+  - echo no | android create avd --force -n test -t "android-"$EMULATOR_API_LEVEL --abi $ANDROID_ABI
+  - emulator -avd test -no-skin -no-audio -no-window &
+  - android-wait-for-emulator
+  - adb shell input keyevent 82 &
+script:
+  - travis_wait 40 ./gradlew :zerokit:connectedAndroidTest -i

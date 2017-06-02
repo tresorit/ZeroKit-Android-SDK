@@ -6,6 +6,10 @@ android {
 
     android {
         publishNonDefault true
+
+        lintOptions {
+            abortOnError false
+        }
     }
 
     defaultConfig {
