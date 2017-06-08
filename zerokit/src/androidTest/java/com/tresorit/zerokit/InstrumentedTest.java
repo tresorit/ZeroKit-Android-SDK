@@ -49,7 +49,7 @@ public class InstrumentedTest {
     public void init() throws Throwable {
         Context targetContext = InstrumentationRegistry.getTargetContext();
         if (adminApi == null) {
-            adminApi = new AdminApi(BuildConfig.APP_BACKEND, BuildConfig.CLIENT_ID);
+            adminApi = AdminApi.init(BuildConfig.APP_BACKEND, BuildConfig.CLIENT_ID);
         }
 
         if (zerokit == null) {
@@ -96,6 +96,26 @@ public class InstrumentedTest {
     private String getUserName(String userName) {
         return String.format("%s-%s", userName, UUID.randomUUID());
     }
+
+//    @Test
+//    public void testGetPublicProfile () {
+//        getPublicProfile(user01);
+//    }
+//
+//    @Test
+//    public void testStorePublicProfile () {
+//        storePublicProfileTest(user01);
+//    }
+//
+//    @Test
+//    public void testStoreProfile () {
+//        storeProfileTest();
+//    }
+//
+//    @Test
+//    public void testStoreData () {
+//        storeDataTest(user01);
+//    }
 
     @Test
     public void testEncrypteDecrypt () {
@@ -375,6 +395,26 @@ public class InstrumentedTest {
         return cipherText;
     }
 
+    private void storeProfileTest() {
+        String profile = new JSONObject().put("test", "test").toString();
+        setProfile(profile);
+        assertEquals(profile, getProfile());
+    }
+
+    private void storePublicProfileTest(String userId) {
+        String profile = new JSONObject().put("test", "test").toString();
+        storePublicProfile(profile);
+        assertEquals(profile, getPublicProfile(userId));
+    }
+
+    private void storeDataTest(String userId) {
+        String tresor = createTresor();
+        String id = "id" + userId;
+        String data = new JSONObject().put("test", "test").toString();
+        storeData(data, tresor, id);
+        assertEquals(data, fetchData(id));
+    }
+
 //    private String createInvitationLinkNoPasswordTest(String userId, String linkBase, String tresorId, String message) {
 //        String url = createInvitationLinkNoPassword(linkBase, tresorId, message);
 //        ResponseZerokitInvitationLinkInfo invitationLinkInfo = getInvitationLinkInfo(url.substring(1));
@@ -471,6 +511,40 @@ public class InstrumentedTest {
 
     private String getUserId(String alias) {
         Response<String, ResponseAdminApiError> response = adminApi.getUserId(alias).execute();
+        assertFalse(response.isError(), response.getError());
+        return response.getResult();
+    }
+
+    private Void storePublicProfile(String publicProfile) {
+        Response<Void, ResponseAdminApiError> response = adminApi.storePublicProfile(publicProfile).execute();
+        assertFalse(response.isError(), response.getError());
+        return response.getResult();
+    }
+
+    private String getPublicProfile(String userId) {
+        Response<String, ResponseAdminApiError> response = adminApi.getPublicProfile(userId).execute();
+        assertFalse(response.isError(), response.getError());
+        return response.getResult();
+    }
+
+    private void setProfile(String profile) {
+        Response<String, ResponseAdminApiError> response = adminApi.setProfile(profile).execute();
+        assertFalse(response.isError(), response.getError());
+    }
+
+    private String getProfile() {
+        Response<String, ResponseAdminApiError> response = adminApi.getProfile().execute();
+        assertFalse(response.isError(), response.getError());
+        return response.getResult();
+    }
+
+    private void storeData(String data, String tresorId, String id) {
+        Response<Void, ResponseAdminApiError> response = adminApi.storeData(tresorId, id, data).execute();
+        assertFalse(response.isError(), response.getError());
+    }
+
+    private String fetchData(String id) {
+        Response<String, ResponseAdminApiError> response = adminApi.fetchData(id).execute();
         assertFalse(response.isError(), response.getError());
         return response.getResult();
     }
