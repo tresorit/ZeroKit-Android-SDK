@@ -1,4 +1,5 @@
 apply plugin: 'com.android.library'
+apply plugin: 'jacoco-android'
 
 android {
 
@@ -23,6 +24,9 @@ android {
             buildConfigField "String", "CLIENT_ID", "\"" + System.getenv('CLIENT_ID') + "\""
             buildConfigField "String", "APP_BACKEND", "\"" +  System.getenv('APP_BACKEND') + "\""
             buildConfigField "String", "API_ROOT", "\"" +  System.getenv('API_ROOT') + "\""
+        }
+        debug {
+            testCoverageEnabled true
         }
     }
 
