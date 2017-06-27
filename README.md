@@ -31,6 +31,7 @@ dependencies {
 ### Initializing ZeroKit
 To initialize the SDK you will need your **API URL**:
 In `AndroidManifest.xml`, add the following element as a child of the `<application>` element, by inserting it just before the closing `</application>` tag:
+
 *AndroidManifest.xml*
 ```xml
 <meta-data
@@ -131,7 +132,7 @@ In the `sample/src/main/AndroidManifest.xml` set the values for `com.tresorit.ze
      android:name="com.tresorit.zerokitsdk.API_ROOT"
      android:value="YOUR API ROOT HERE (eg. https://{your tenant's service url})"/>
 ```
-In the `sample/src/main/assets/zerokit.properties` set the values for `adminkey` and `adminuserid`. If this file does not exist, copy the sample `zerokit.demo.properties` file in the same directory to create one:
+In the `sample/src/main/assets/zerokit.properties` set the values for `clientid` and `appbackend`.
 ```
 clientid={client id for your openid}
 appbackend={url of the sample application backend}
@@ -140,8 +141,6 @@ appbackend={url of the sample application backend}
 - `apiroot`: This is your tenant's service URL. You can find this URL on the management portal.
 - `clientid`: This is the client ID for your OpenID Connect client that you wish to use with your mobile.
 - `appbackend`: This is the URL of the sample application backend. You can find the sample backend and setup instructions [here](https://github.com/tresorit/ZeroKit-NodeJs-backend-sample).
-
-**!!! IMPORTANT NOTE:** You must **never include your Admin key in your application**. All Admin key calls must be done by your backend. We implemented a mock application in this example so you can run it without setting up a server. The admin key must be kept secret and not included in any client applications that you distribute.
 
 Now you are ready to **Build and Run** the example in Android Studio.
 
