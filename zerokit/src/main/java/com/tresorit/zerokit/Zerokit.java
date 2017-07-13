@@ -473,7 +473,7 @@ public final class Zerokit {
                         else {
                             log("Init started");
                             initStateHandler.setState(State.RUNNING);
-                            loadUrl(webView, apiRootUrl);
+                            loadUrl(webView, apiRootUrl, false);
                         }
                     }
                 } else
@@ -568,9 +568,13 @@ public final class Zerokit {
         initCheck().enqueue(new Action<Void>() {
             @Override
             public void call(Void aVoid) {
-                loadUrl(webViewIDP, url);
+                loadUrl(webViewIDP, url, false);
             }
         });
+    }
+
+    void loadUrl(@NonNull final WebView webView, @NonNull final String url){
+        loadUrl(webView, url, true);
     }
 
     /**
@@ -579,11 +583,14 @@ public final class Zerokit {
      * @param url The url which will be loaded in the webview
      */
     @SuppressWarnings("WeakerAccess")
-    void loadUrl(@NonNull final WebView webView, @NonNull final String url) {
+    void loadUrl(@NonNull final WebView webView, @NonNull final String url, final boolean isJS) {
         executorWebView.execute(new Runnable() {
             @Override
             public void run() {
-                webView.loadUrl(url);
+                if (isJS)
+                    webView.evaluateJavascript(url, null);
+                else
+                    webView.loadUrl(url);
             }
         });
     }
