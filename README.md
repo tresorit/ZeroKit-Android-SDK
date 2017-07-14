@@ -23,7 +23,7 @@ You can [sign up for **ZeroKit** here.](https://tresorit.com/zerokit/)
 Add the dependency to `build.gradle`
 ```groovy
 dependencies {
-    compile 'com.tresorit.zerokit:zerokit:4.1.1'
+    compile 'com.tresorit.zerokit:zerokit:4.1.2'
 }
 ```
 
