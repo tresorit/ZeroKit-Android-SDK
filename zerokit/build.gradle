@@ -1,4 +1,5 @@
 apply plugin: 'com.android.library'
+apply plugin: 'jacoco-android'
 
 android {
 
@@ -18,13 +19,20 @@ android {
         publishNonDefault true
     }
 
+    buildTypes {
+        debug {
+            testCoverageEnabled true
+        }
+    }
+
 }
 
 dependencies {
-    compile project(':common')
+    implementation project(':common')
+    androidTestCompile project(':adminapi')
+
     compile fileTree(include: ['*.jar'], dir: 'libs')
     compile "com.android.support:appcompat-v7:$appcompatVersion"
     androidTestCompile 'com.android.support.test:testing-support-lib:0.1'
-    androidTestCompile project(path: ':adminapi', configuration: 'debug')
     compile 'com.android.support.test.espresso:espresso-idling-resource:2.2.2'
 }

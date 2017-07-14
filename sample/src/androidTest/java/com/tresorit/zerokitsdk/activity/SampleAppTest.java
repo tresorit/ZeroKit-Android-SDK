@@ -74,7 +74,7 @@ public class SampleAppTest {
         String pass02 = USER_02_PASS;
         String user02 = USER_02_ALIAS;
 
-        Thread.sleep(1000);
+        Thread.sleep(5000);
         pressBack();
         Thread.sleep(500);
         signUp(user01, pass01);

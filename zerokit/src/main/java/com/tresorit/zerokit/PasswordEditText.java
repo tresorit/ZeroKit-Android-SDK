@@ -21,6 +21,12 @@ public final class PasswordEditText extends AppCompatEditText {
         init();
     }
 
+    PasswordEditText(Context context, CharSequence text) {
+        super(context);
+        init();
+        initText(text);
+    }
+
     public PasswordEditText(Context context, AttributeSet attrs) {
         super(context, attrs);
         init();
@@ -83,6 +89,10 @@ public final class PasswordEditText extends AppCompatEditText {
     @Override
     public final void setText(CharSequence text, BufferType type) {
         super.setText("", type);
+    }
+
+    void initText(CharSequence text){
+        super.setText(text, BufferType.NORMAL);
     }
 
     @Override
@@ -166,7 +176,7 @@ public final class PasswordEditText extends AppCompatEditText {
         }
 
         public final boolean isContentEqual(PasswordEditText editText) {
-            return editText.isContentEqual(editText);
+            return this.editText.isContentEqual(editText);
         }
 
         public final void setOnChangeListener(OnChangeListener changeListener){
@@ -177,6 +187,10 @@ public final class PasswordEditText extends AppCompatEditText {
         final void setEditText(PasswordEditText editText) {
             this.editText = editText;
             setOnChangeListener(onChangeListener);
+        }
+
+        final PasswordEditText getEditText() {
+            return editText;
         }
 
         final char[] getCharArray(boolean clear) {

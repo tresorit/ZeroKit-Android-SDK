@@ -17,7 +17,7 @@ public class ZerokitInitializer extends ContentProvider {
         try {
             Context context = getContext();
             String url = context.getPackageManager().getApplicationInfo(context.getPackageName(), PackageManager.GET_META_DATA).metaData.getString(API_ROOT);
-            Zerokit.init(context, url);
+            Zerokit.init(context, url).initMain();
         } catch (PackageManager.NameNotFoundException e) {
             throw new IllegalStateException("No ApiRoot definition found in the AndroidManifest.xml");
         }

@@ -20,7 +20,7 @@ public class ResponseZerokitError extends ZerokitJson {
 
     @Override
     public String toString() {
-        return String.format("type: %s, code: %s, message: %s, description: %s", type, code, message, description);
+        return String.format("type: %s, code: %s, message: %s, description: %s", getType(), getCode(), getMessage(), getDescription());
     }
 
     public ResponseZerokitError(String description) {

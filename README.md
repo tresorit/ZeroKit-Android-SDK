@@ -31,7 +31,6 @@ dependencies {
 ### Initializing ZeroKit
 To initialize the SDK you will need your **API URL**:
 In `AndroidManifest.xml`, add the following element as a child of the `<application>` element, by inserting it just before the closing `</application>` tag:
-
 *AndroidManifest.xml*
 ```xml
 <meta-data
@@ -125,22 +124,16 @@ An example application is included with ZeroKit to demonstrate its usage. It dem
 - Decryption
 
 ### Configuring the Example
-The example app requires a backend to function. We created a sample backend that you can use for the mobile and web ZeroKit sample apps. You can find the backend and setup instructions [here](https://github.com/tresorit/ZeroKit-NodeJs-backend-sample).
-In the `sample/src/main/AndroidManifest.xml` set the values for `com.tresorit.zerokitsdk.API_ROOT`.
-```xml
-<meta-data
-     android:name="com.tresorit.zerokitsdk.API_ROOT"
-     android:value="YOUR API ROOT HERE (eg. https://{your tenant's service url})"/>
+In the `app/src/main/zerokit.properties` set the values of `apiroot`, `clientid`, `appbackend` and `objectserver`. If this file does not exist, let’s create one with the same name.
 ```
-In the `sample/src/main/assets/zerokit.properties` set the values for `clientid` and `appbackend`.
-```
-clientid={client id for your openid}
-appbackend={url of the sample application backend}
+apiroot=your base url (e.g. https://{tenantid}.api.tresorit.io)
+clientid=client id for your openid
+appbackend= url of the sample application backend (e.g. http://10.0.2.2:3000)
 ```
 
-- `apiroot`: This is your tenant's service URL. You can find this URL on the management portal.
-- `clientid`: This is the client ID for your OpenID Connect client that you wish to use with your mobile.
-- `appbackend`: This is the URL of the sample application backend. You can find the sample backend and setup instructions [here](https://github.com/tresorit/ZeroKit-NodeJs-backend-sample).
+- `apiroot`: This is your _ZeroKit Service URL_. You can find this URL on the management portal.
+- `clientid`: This is the _client ID_ for your _OpenID Connect client_ that you wish to use with your mobile app. You can find this value on the basic configuration page of your _tenant_ at [here](https://manage.tresorit.io)
+- `appbackend`: This is the address of the sample _application backend_.
 
 Now you are ready to **Build and Run** the example in Android Studio.
 

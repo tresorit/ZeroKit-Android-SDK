@@ -6,7 +6,6 @@ import android.support.annotation.VisibleForTesting;
 import android.support.test.espresso.IdlingResource;
 
 import com.google.gson.Gson;
-import com.tresorit.zerokit.call.Action;
 import com.tresorit.zerokit.call.Call;
 import com.tresorit.zerokit.call.CallBase;
 import com.tresorit.zerokit.call.Callback;
@@ -17,8 +16,9 @@ import com.tresorit.zerokit.response.ResponseAdminApiLoginByCode;
 import com.tresorit.zerokit.util.Holder;
 import com.zerokit.zerokit.BuildConfig;
 
-import org.json.JSONObject;
+import org.json.JSONException;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
@@ -67,7 +67,18 @@ public class AdminApi {
     @Nullable
     ZerokitCountingIdlingResource idlingResource;
 
-    public AdminApi(String host, String clientId) {
+    private static AdminApi instance;
+
+    public static AdminApi init(@NonNull String host, String clientId) {
+        instance = new AdminApi(host, clientId);
+        return instance;
+    }
+
+    public static AdminApi getInstance() {
+        return instance;
+    }
+
+    private AdminApi(String appbackendUrl, String clientId) {
         this.clientId = clientId;
         OkHttpClient.Builder builderHttpClient = new OkHttpClient.Builder();
 
@@ -88,7 +99,7 @@ public class AdminApi {
         builderHttpClient.addInterceptor(interceptorAuthorization);
         builderHttpClient.addInterceptor(interceptorLogging);
 
-        Retrofit.Builder builder = new Retrofit.Builder().baseUrl(host).client(builderHttpClient.build()).addConverterFactory(GsonConverterFactory.create());
+        Retrofit.Builder builder = new Retrofit.Builder().baseUrl(appbackendUrl).client(builderHttpClient.build()).addConverterFactory(GsonConverterFactory.create());
         Retrofit retrofit = builder.build();
         adminApiService = retrofit.create(AdminApiService.class);
         gson = new Gson();
@@ -115,6 +126,18 @@ public class AdminApi {
         setToken(null);
     }
 
+    public String getToken() {
+        return token;
+    }
+
+    private String getData(String data) {
+        return getData(data, null);
+    }
+
+    private String getData(String data, String tresorId) {
+        return new JSONObject().put("data", data).put("tresorId", tresorId).toString();
+    }
+
     public Call<String, ResponseAdminApiError> getUserId(final String userName) {
         return new CallRetrofit<>(adminApiService.getUserId(userName));
     }
@@ -131,12 +154,20 @@ public class AdminApi {
         return new CallRetrofit<>(adminApiService.validateUser(userId, validationCode));
     }
 
-    public Call<String, ResponseAdminApiError> setProfile(final String json) {
-        return new CallRetrofit<>(adminApiService.setProfile(RequestBody.create(JSON, json)));
+    public Call<String, ResponseAdminApiError> setProfile(final String profile) {
+        return new CallRetrofit<>(adminApiService.setProfile(RequestBody.create(JSON, getData(profile))));
     }
 
     public Call<String, ResponseAdminApiError> getProfile() {
         return new CallRetrofit<>(adminApiService.getProfile());
+    }
+
+    public Call<Void, ResponseAdminApiError> storePublicProfile(final String publicProfile) {
+        return new CallRetrofit<>(adminApiService.storePublicProfile(RequestBody.create(JSON, getData(publicProfile))));
+    }
+
+    public Call<String, ResponseAdminApiError> getPublicProfile(String userId) {
+        return new CallRetrofit<>(adminApiService.getPublicProfile(userId));
     }
 
     public Call<ResponseAdminApiLoginByCode, ResponseAdminApiError> login(final String code) {
@@ -155,13 +186,13 @@ public class AdminApi {
         return new CallRetrofit<>(adminApiService.kickedUser(operationId));
     }
 
-    @SuppressWarnings("WeakerAccess")
-    public Call<String, ResponseAdminApiError> storeData(final String tresorId, final String id, final String json) {
-        return new CallRetrofit<>(adminApiService.storeData(tresorId, id, RequestBody.create(JSON, json)));
+    public Call<Void, ResponseAdminApiError> invitedUser(final String operationId) {
+        return new CallRetrofit<>(adminApiService.invitedUser(operationId));
     }
 
-    public Call<String, ResponseAdminApiError> storeData(final String tresorId, final String id, final JSONObject json) {
-        return storeData(tresorId, id, json.toString());
+    @SuppressWarnings("WeakerAccess")
+    public Call<Void, ResponseAdminApiError> storeData(final String tresorId, final String id, final String data) {
+        return new CallRetrofit<>(adminApiService.storeData(id, RequestBody.create(JSON, getData(data, tresorId))));
     }
 
     @SuppressWarnings("WeakerAccess")
@@ -169,29 +200,16 @@ public class AdminApi {
         return new CallRetrofit<>(adminApiService.fetchData(id));
     }
 
-    public <T> Call<T, ResponseAdminApiError> fetchData(final String id, final Class<T> clazz) {
-        return new CallBase<T, ResponseAdminApiError>() {
-            @Override
-            public void enqueue(final Callback<? super T, ? super ResponseAdminApiError> callback) {
-                fetchData(id).enqueue(new Action<String>() {
-                    @Override
-                    public void call(String s) {
-                        callback.onSuccess(gson.fromJson(s, clazz));
-                    }
-                }, new Action<ResponseAdminApiError>() {
-                    @Override
-                    public void call(ResponseAdminApiError responseAdminApiError) {
-                        callback.onError(responseAdminApiError);
-                    }
-                });
-            }
+    public Call<Void, ResponseAdminApiError> acceptedInvitationLink(final String operationId) {
+        return new CallRetrofit<>(adminApiService.acceptedInvitationLink(operationId));
+    }
 
-            @Override
-            public Response<T, ResponseAdminApiError> execute() {
-                Response<String, ResponseAdminApiError> execute = fetchData(id).execute();
-                return Response.from(gson.fromJson(execute.getResult(), clazz), execute.getError());
-            }
-        };
+    public Call<Void, ResponseAdminApiError> createdInvitationLink(final String operationId) {
+        return new CallRetrofit<>(adminApiService.createdInvitationLink(operationId));
+    }
+
+    public Call<Void, ResponseAdminApiError> revokedInvitationLink(final String operationId) {
+        return new CallRetrofit<>(adminApiService.revokedInvitationLink(operationId));
     }
 
 
@@ -219,6 +237,8 @@ public class AdminApi {
                 public void run() {
                     try {
                         result.t = getResponseFromResponse(call.execute());
+                    } catch (EOFException e) {
+                        result.t = Response.fromValue(null);
                     } catch (IOException e) {
                         result.t = Response.fromError(new ResponseAdminApiError(e.getMessage()));
                     }
@@ -267,7 +287,10 @@ public class AdminApi {
         @Override
         public void onFailure(retrofit2.Call<T> call, Throwable t) {
             decrementIdlingResource();
-            callback.onError(new ResponseAdminApiError(t.getMessage()));
+            if (t instanceof EOFException)
+                callback.onSuccess(null);
+            else
+                callback.onError(new ResponseAdminApiError(t.getMessage()));
         }
     }
 
@@ -327,9 +350,14 @@ public class AdminApi {
         @POST("/api/tresor/kicked-user")
         retrofit2.Call<Void> kickedUser(@Field("operationId") String operationId);
 
+        @FormUrlEncoded
+        @Headers(AUTHORIZATION_HEADER)
+        @POST("/api/user/invited-user")
+        retrofit2.Call<Void> invitedUser(@Field("operationId") String operationId);
+
         @Headers(AUTHORIZATION_HEADER)
         @POST("/api/data/store")
-        retrofit2.Call<String> storeData(@Query("tresorId") String tresorId, @Query("id") String id, @Body RequestBody data);
+        retrofit2.Call<Void> storeData(@Query("id") String id, @Body RequestBody data);
 
         @Headers(AUTHORIZATION_HEADER)
         @GET("/api/data/get")
@@ -342,10 +370,33 @@ public class AdminApi {
         @Headers(AUTHORIZATION_HEADER)
         @GET("/api/data/profile")
         retrofit2.Call<String> getProfile();
+
+        @Headers(AUTHORIZATION_HEADER)
+        @POST("/api/data/public-profile")
+        retrofit2.Call<Void> storePublicProfile(@Body RequestBody data);
+
+        @Headers(AUTHORIZATION_HEADER)
+        @GET("/api/data/public-profile")
+        retrofit2.Call<String> getPublicProfile(@Query("id") String userId);
+
+        @FormUrlEncoded
+        @Headers(AUTHORIZATION_HEADER)
+        @POST("/api/invitationLinks/created")
+        retrofit2.Call<Void> createdInvitationLink(@Field("operationId") String operationId);
+
+        @FormUrlEncoded
+        @Headers(AUTHORIZATION_HEADER)
+        @POST("/api/invitationLinks/revoked")
+        retrofit2.Call<Void> revokedInvitationLink(@Field("operationId") String operationId);
+
+        @FormUrlEncoded
+        @Headers(AUTHORIZATION_HEADER)
+        @POST("/api/invitationLinks/accepted")
+        retrofit2.Call<Void> acceptedInvitationLink(@Field("operationId") String operationId);
     }
 
 
-    private class ZerokitCountingIdlingResource  implements IdlingResource {
+    private class ZerokitCountingIdlingResource implements IdlingResource {
 
         private final AtomicInteger counter;
 
@@ -397,5 +448,40 @@ public class AdminApi {
     public IdlingResource getIdlingResource() {
         if (idlingResource == null) idlingResource = new ZerokitCountingIdlingResource();
         return idlingResource;
+    }
+
+    private class JSONObject {
+
+        private org.json.JSONObject jsonObject;
+
+        public JSONObject() {
+            jsonObject = new org.json.JSONObject();
+        }
+
+        public String getString(String name) {
+            if (jsonObject != null)
+                try {
+                    return jsonObject.getString(name);
+                } catch (JSONException e) {
+                    //e.printStackTrace();
+                }
+            return "";
+        }
+
+
+        public JSONObject put(String name, Object value)  {
+            if (jsonObject != null)
+                try {
+                    jsonObject.put(name, value);
+                } catch (JSONException e) {
+                    //e.printStackTrace();
+                }
+            return this;
+        }
+
+        @Override
+        public String toString() {
+            return jsonObject != null ? jsonObject.toString() : "";
+        }
     }
 }

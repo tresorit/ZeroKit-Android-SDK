@@ -10,17 +10,13 @@ import dagger.Provides;
 @Module
 public class AdminApiModule {
 
-    private final String host;
-    private final String cliendId;
-
     public AdminApiModule(String host, String cliendId) {
-        this.host = host;
-        this.cliendId = cliendId;
+        AdminApi.init(host, cliendId);
     }
 
     @Provides
     @ApplicationScope
     public AdminApi provideAdminApi(){
-        return new AdminApi(host, cliendId);
+        return AdminApi.getInstance();
     }
 }

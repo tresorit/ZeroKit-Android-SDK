@@ -20,6 +20,7 @@ public class JSONObject {
             jsonObject = new org.json.JSONObject(json);
         } catch (JSONException e) {
             //e.printStackTrace();
+            jsonObject = new org.json.JSONObject();
         }
     }
 

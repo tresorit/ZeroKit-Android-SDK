@@ -6,7 +6,6 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Handler;
-import android.os.HandlerThread;
 import android.os.Looper;
 import android.security.KeyPairGeneratorSpec;
 import android.support.annotation.IntDef;
@@ -27,11 +26,10 @@ import android.webkit.WebViewClient;
 import com.tresorit.zerokit.call.Action;
 import com.tresorit.zerokit.call.ActionCallback;
 import com.tresorit.zerokit.call.Call;
-import com.tresorit.zerokit.call.CallAction;
 import com.tresorit.zerokit.call.CallAsync;
 import com.tresorit.zerokit.call.CallAsyncAction;
 import com.tresorit.zerokit.call.Callback;
-import com.tresorit.zerokit.call.CallbackExecutor;
+import com.tresorit.zerokit.call.Response;
 import com.tresorit.zerokit.response.IdentityTokens;
 import com.tresorit.zerokit.response.ResponseZerokitChangePassword;
 import com.tresorit.zerokit.response.ResponseZerokitCreateInvitationLink;
@@ -40,7 +38,8 @@ import com.tresorit.zerokit.response.ResponseZerokitInvitationLinkInfo;
 import com.tresorit.zerokit.response.ResponseZerokitLogin;
 import com.tresorit.zerokit.response.ResponseZerokitPasswordStrength;
 import com.tresorit.zerokit.response.ResponseZerokitRegister;
-import com.tresorit.zerokit.util.PRNGFixes;
+import com.tresorit.zerokit.util.Holder;
+import com.tresorit.zerokit.util.TenantIdResolver;
 import com.tresorit.zerokit.util.ZerokitJson;
 
 import org.json.JSONArray;
@@ -80,7 +79,14 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.crypto.Cipher;
@@ -96,9 +102,27 @@ import static com.tresorit.zerokit.Zerokit.Function.Type.MobileCmd;
 
 public final class Zerokit {
 
+    private static final int CPU_COUNT = Runtime.getRuntime().availableProcessors();
+    private static final int CORE_POOL_SIZE = Math.max(2, Math.min(CPU_COUNT - 1, 4));
+    private static final int MAXIMUM_POOL_SIZE = CPU_COUNT * 2 + 1;
+    private static final int KEEP_ALIVE_SECONDS = 30;
+
+    private static final ThreadFactory sThreadFactory = new ThreadFactory() {
+        private final AtomicInteger mCount = new AtomicInteger(1);
+
+        public Thread newThread(Runnable r) {
+            return new Thread(r, "Zerokit #" + mCount.getAndIncrement());
+        }
+    };
+
+    private static final BlockingQueue<Runnable> sPoolWorkQueue =
+            new LinkedBlockingQueue<>(128);
+
     @SuppressWarnings("WeakerAccess")
     final Executor executorWebView;
 
+    @SuppressWarnings("WeakerAccess")
+    final Executor executorBackground;
 
     private final static class MainThreadExecutor implements Executor {
         private final Handler handler;
@@ -109,23 +133,14 @@ public final class Zerokit {
 
         @Override
         public void execute(Runnable r) {
-            handler.post(r);
+            if (isMainThread()) r.run();
+            else handler.post(r);
         }
     }
 
-    private final static class WebViewThreadExecutor implements Executor {
-        private final Handler handler;
-
-        WebViewThreadExecutor() {
-            HandlerThread handlerThread = new HandlerThread("WebView thread");
-            handlerThread.start();
-            handler = new Handler(handlerThread.getLooper());
-        }
-
-        @Override
-        public void execute(Runnable r) {
-            handler.post(r);
-        }
+    @SuppressWarnings("WeakerAccess")
+    static boolean isMainThread() {
+        return Looper.myLooper() == Looper.getMainLooper();
     }
 
 
@@ -209,7 +224,7 @@ public final class Zerokit {
      * Collection of the registered observers, which will be triggered after a javascript function returns a result
      */
     @SuppressWarnings("WeakerAccess")
-    final Map<String, CallbackExecutor<? super String, ? super String>> observers;
+    final Map<String, Callback<? super String, ? super String>> observers;
 
     /**
      * The api root url
@@ -266,11 +281,11 @@ public final class Zerokit {
      *
      * @param context a Context object used to pass it to the WebView and to get the metadata from manifest file
      */
-    static void init(@NonNull Context context, @NonNull String url) {
+    static Zerokit init(@NonNull Context context, @NonNull String url) {
         if (TextUtils.isEmpty(url))
             throw new IllegalStateException("No ApiRoot definition found in the AndroidManifest.xml");
-        PRNGFixes.apply();
         instance = new Zerokit(context, url);
+        return instance;
     }
 
     /**
@@ -286,20 +301,23 @@ public final class Zerokit {
      * Constructs a new Zerokit instance with a Context object.
      *
      * @param context a Context object used to pass it to the WebView
-     * @param url     the url of the provided api root
+     * @param baseUrl     the url of the provided api root
      */
     @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
-    private Zerokit(@NonNull final Context context, @NonNull String url) {
-        Uri uri = Uri.parse(url);
+    private Zerokit(@NonNull final Context context, @NonNull String baseUrl) {
+        Uri uri = Uri.parse(baseUrl);
 
-        executorWebView = new WebViewThreadExecutor();
+        executorWebView = new MainThreadExecutor();
+        ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(CORE_POOL_SIZE, MAXIMUM_POOL_SIZE, KEEP_ALIVE_SECONDS, TimeUnit.SECONDS, sPoolWorkQueue, sThreadFactory);
+        threadPoolExecutor.allowCoreThreadTimeOut(true);
+        executorBackground = threadPoolExecutor;
         secureRandom = new SecureRandom();
 
         apiRoot = uri.getAuthority();
-        tenantId = apiRoot.split("\\.")[0];
+        tenantId = TenantIdResolver.getTenantId(baseUrl);
         apiRootUrl = uri.buildUpon().appendPath("static").appendPath("v4").appendPath("api.html").build().toString();
 
-        observers = new HashMap<>();
+        observers = new ConcurrentHashMap<>();
 
         clientWebView = new ZerokitWebViewClientBase();
         clientIdpWebView = new ZerokitWebViewClientBase();
@@ -329,7 +347,7 @@ public final class Zerokit {
         clientWebView.addPageFinishListener(new PageFinishListener() {
             @Override
             public void onPageFinished(String url) {
-                if (initStateHandler.getState() == State.RUNNING){
+                if (initStateHandler.getState() == State.RUNNING) {
                     log("Init finished: " + url);
                     initStateHandler.setState(State.FINISHED);
                     clientWebView.removePageFinishListener(this);
@@ -338,7 +356,7 @@ public final class Zerokit {
 
             @Override
             public void onReceivedError(int errorCode) {
-                switch (errorCode){
+                switch (errorCode) {
                     case WebViewClient.ERROR_HOST_LOOKUP:
                         log("Init failed: " + errorCode);
                         initStateHandler.setState(State.NOT_STARTED);
@@ -350,7 +368,7 @@ public final class Zerokit {
         serializerJavaScriptSource = loadJavaScriptSource(context, R.raw.javascript);
         idpHelperJavaScriptSource = loadJavaScriptSource(context, R.raw.javascript_idp);
 
-        executorWebView.execute(new Runnable() {
+        Runnable init = new Runnable() {
             @Override
             public void run() {
                 webView = createWebView(context);
@@ -367,13 +385,16 @@ public final class Zerokit {
                     executorWebView.notify();
                 }
             }
-        });
-
-        synchronized (executorWebView) {
-            try {
-                executorWebView.wait();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+        };
+        if (isMainThread()) init.run();
+        else {
+            executorWebView.execute(init);
+            synchronized (executorWebView) {
+                try {
+                    executorWebView.wait();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
             }
         }
 
@@ -413,7 +434,7 @@ public final class Zerokit {
     }
 
     @SuppressWarnings({"WeakerAccess"})
-    CallAsync<Void, String> idpCheck() {
+    CallAsync<Void, String> initIdpCheck() {
         return new CallAsyncAction<>(new ActionCallback<Void, String>() {
             @Override
             public void call(final Callback<? super Void, ? super String> subscriber) {
@@ -443,7 +464,7 @@ public final class Zerokit {
      */
     @NonNull
     @SuppressWarnings({"WeakerAccess"})
-    CallAsync<Void, String> initCheck() {
+    CallAsync<Void, String> initMainCheck() {
         return new CallAsyncAction<>(new ActionCallback<Void, String>() {
             @Override
             public void call(final Callback<? super Void, ? super String> subscriber) {
@@ -458,7 +479,7 @@ public final class Zerokit {
                             if (state == State.FINISHED) {
                                 subscriber.onSuccess(null);
                                 initStateHandler.removeListener(this);
-                            } else if (state == State.NOT_STARTED){
+                            } else if (state == State.NOT_STARTED) {
                                 subscriber.onError("Initialization failed");
                                 initStateHandler.removeListener(this);
                             }
@@ -473,7 +494,7 @@ public final class Zerokit {
                         else {
                             log("Init started");
                             initStateHandler.setState(State.RUNNING);
-                            loadUrl(webView, apiRootUrl);
+                            loadUrl(webView, apiRootUrl, false);
                         }
                     }
                 } else
@@ -485,9 +506,14 @@ public final class Zerokit {
         });
     }
 
+    public CallAsync<Void, String> initMain() {
+        return initMainCheck();
+    }
+
+
     @SuppressWarnings({"WeakerAccess"})
     <T> void callFunction(@NonNull final Function function, @NonNull final CallbackByteArrayIds<T> callback, final Object... arguments) {
-        callFunction(function, new CallbackExecutor<>(callback), callback.ids, arguments);
+        callFunction(function, callback, callback.ids, arguments);
     }
 
 
@@ -499,10 +525,10 @@ public final class Zerokit {
      * @param arguments  the arguments of the function which we would like to call
      */
     @SuppressWarnings({"WeakerAccess", "unchecked"})
-    void callFunction(@NonNull final Function function, @NonNull final CallbackExecutor<String, String> subscriber, final String[] ids, final Object... arguments) {
+    void callFunction(@NonNull final Function function, @NonNull final Callback<String, String> subscriber, final String[] ids, final Object... arguments) {
         log(String.format("call: %s", function.name()));
 
-        initCheck().enqueue(new Action<Void>() {
+        initMainCheck().enqueue(new Action<Void>() {
             @Override
             public void call(Void result) {
                 String id = UUID.randomUUID().toString();
@@ -553,7 +579,7 @@ public final class Zerokit {
 
     @SuppressWarnings("WeakerAccess")
     void callFunctionIdp() {
-        initCheck().enqueue(new Action<Void>() {
+        initMainCheck().enqueue(new Action<Void>() {
             @Override
             public void call(Void aVoid) {
                 loadUrl(webViewIDP, "javascript:\n" +
@@ -564,13 +590,17 @@ public final class Zerokit {
     }
 
     @SuppressWarnings("WeakerAccess")
-    void callFuncionIdpUrl(final String url) {
-        initCheck().enqueue(new Action<Void>() {
+    void callIdpUrl(final String url) {
+        initMainCheck().enqueue(new Action<Void>() {
             @Override
             public void call(Void aVoid) {
-                loadUrl(webViewIDP, url);
+                loadUrl(webViewIDP, url, false);
             }
         });
+    }
+
+    void loadUrl(@NonNull final WebView webView, @NonNull final String url){
+        loadUrl(webView, url, true);
     }
 
     /**
@@ -579,11 +609,14 @@ public final class Zerokit {
      * @param url The url which will be loaded in the webview
      */
     @SuppressWarnings("WeakerAccess")
-    void loadUrl(@NonNull final WebView webView, @NonNull final String url) {
+    void loadUrl(@NonNull final WebView webView, @NonNull final String url, final boolean isJS) {
         executorWebView.execute(new Runnable() {
             @Override
             public void run() {
-                webView.loadUrl(url);
+                if (isJS)
+                    webView.evaluateJavascript(url, null);
+                else
+                    webView.loadUrl(url);
             }
         });
     }
@@ -776,7 +809,7 @@ public final class Zerokit {
             clientIdpWebView.addPageFinishListener(pageFinishListener[0]);
             jsInterfaceHtmlExporter.addListener(interfaceHtmlExporter[0]);
 
-            callFuncionIdpUrl(builder.build().toString());
+            callIdpUrl(builder.build().toString());
         } catch (NoSuchAlgorithmException | UnsupportedEncodingException e) {
             callback.onError(new ResponseZerokitError(e.getMessage()));
         }
@@ -989,7 +1022,7 @@ public final class Zerokit {
         @JavascriptInterface
         @SuppressWarnings("unused")
         public void onSuccess(final String result, final String key) {
-            final CallbackExecutor<? super String, ? super String> subscriber = observers.get(key);
+            final Callback<? super String, ? super String> subscriber = observers.get(key);
             if (subscriber != null) {
                 subscriber.onSuccess(result);
                 observers.remove(key);
@@ -1006,7 +1039,7 @@ public final class Zerokit {
         @JavascriptInterface
         @SuppressWarnings("unused")
         public void onError(final String result, final String key) {
-            final CallbackExecutor<? super String, ? super String> subscriber = observers.get(key);
+            final Callback<? super String, ? super String> subscriber = observers.get(key);
             if (subscriber != null) {
                 subscriber.onError(result);
                 observers.remove(key);
@@ -1054,6 +1087,7 @@ public final class Zerokit {
         decrypt,
         encrypt,
         getInvitationLinkInfo(Cmd, ArgType.JSONToken),
+        revokeInvitationLink,
         kickFromTresor,
         logout,
         shareTresor,
@@ -1071,9 +1105,9 @@ public final class Zerokit {
          * Modifies the url, which the function will be called on
          */
         @Type
-        private final int type;
-        private final ExtraArg[] extraArgs;
-        private final ArgType responseFormatter;
+        final int type;
+        final ExtraArg[] extraArgs;
+        final ArgType responseFormatter;
 
         /**
          * Constructs a Function with the given parameters, which will represent a javascript function.
@@ -1083,14 +1117,9 @@ public final class Zerokit {
             this(Cmd, null);
         }
 
-        Function(@Type int type) {
-            this(type, null);
-        }
-
         Function(ExtraArg... extraArgs) {
             this(Cmd, null, extraArgs);
         }
-
 
         /**
          * Constructs a Function with the given parameters, which will represent a javascript function
@@ -1123,6 +1152,7 @@ public final class Zerokit {
          * Report an error to the host application. These errors are unrecoverable
          * (i.e. the main resource is unavailable). The errorCode parameter
          * corresponds to one of the ERROR_* constants.
+         *
          * @param errorCode The error code corresponding to an ERROR_* value.
          */
         void onReceivedError(int errorCode);
@@ -1144,8 +1174,8 @@ public final class Zerokit {
             stateChangeListeners = new ArrayList<>();
         }
 
-        private void setState(@State int newState) {
-            if (newState != state){
+        void setState(@State int newState) {
+            if (newState != state) {
                 this.state = newState;
                 for (StateChangeListener stateChangeListener : new ArrayList<>(stateChangeListeners))
                     stateChangeListener.onStateChanged(state);
@@ -1222,10 +1252,11 @@ public final class Zerokit {
          * Report an error to the host application. These errors are unrecoverable
          * (i.e. the main resource is unavailable). The errorCode parameter
          * corresponds to one of the ERROR_* constants.
-         * @param view The WebView that is initiating the callback.
-         * @param errorCode The error code corresponding to an ERROR_* value.
+         *
+         * @param view        The WebView that is initiating the callback.
+         * @param errorCode   The error code corresponding to an ERROR_* value.
          * @param description A String describing the error.
-         * @param failingUrl The url that failed to load.
+         * @param failingUrl  The url that failed to load.
          */
         @Override
         public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
@@ -1365,6 +1396,81 @@ public final class Zerokit {
         }
     }
 
+    private class CallAction<T, S> extends CallAsyncAction<T, S> implements Call<T, S> {
+
+        CallAction(ActionCallback<T, S> action) {
+            super(action);
+        }
+
+        void checkThreadSync() {
+            if (isMainThread() && initStateHandler.getState() != State.FINISHED)
+                throw new IllegalStateException("Sync method call from the main thread is only possible after the initialization was finished." +
+                        "You can call sync method from background thread any time, or from main thread after the initialization is done." +
+                        "You can call async method from any looper thread any time");
+        }
+
+        @Override
+        public final void enqueue(final Callback<? super T, ? super S> callback) {
+            if (Looper.myLooper() == null)
+                throw new IllegalStateException("Asynchronous method only possible from looper threads.");
+            final Handler handler = new Handler(Looper.myLooper());
+            executorBackground.execute(new Runnable() {
+                @Override
+                public void run() {
+                    action.call(new Callback<T, S>() {
+                        @Override
+                        public void onSuccess(final T result) {
+                            handler.post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    callback.onSuccess(result);
+                                }
+                            });
+                        }
+
+                        @Override
+                        public void onError(final S e) {
+                            handler.post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    callback.onError(e);
+                                }
+                            });
+                        }
+                    });
+                }
+            });
+        }
+
+        @Override
+        public final Response<T, S> execute() {
+            checkThreadSync();
+
+            final Holder<Response<T, S>> result = new Holder<>();
+            final CountDownLatch signal = new CountDownLatch(1);
+
+            action.call(new Callback<T, S>() {
+                @Override
+                public void onSuccess(T t) {
+                    result.t = Response.fromValue(t);
+                    signal.countDown();
+                }
+
+                @Override
+                public void onError(S e) {
+                    result.t = Response.fromError(e);
+                    signal.countDown();
+                }
+            });
+            if (signal.getCount() > 0)
+                try {
+                    signal.await();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            return result.t;
+        }
+    }
 
     /**
      * This method tries to log in the given user with the given password entered by the user
@@ -1478,6 +1584,7 @@ public final class Zerokit {
     // ====================================
     //  Identity tokens
     // ====================================
+
     /**
      * Get authorization code and identity tokens for the currenty logged in user.
      *
@@ -1493,22 +1600,22 @@ public final class Zerokit {
     /**
      * Get authorization code and identity tokens for the currenty logged in user.
      *
-     * @param clientId The cliend ID for the current ZeroKit OpenID Connect client set up in the management portal.
+     * @param clientId    The cliend ID for the current ZeroKit OpenID Connect client set up in the management portal.
      * @param useProofKey Option to use proof key
      * @return IdentityTokens which contains: Authorization code, Identity token, Code Verifier (Contains the code verifier if you have 'Requires proof key' enabled for your client)
      */
     @NonNull
     private Call<IdentityTokens, ResponseZerokitError> getIdentityTokens(final String clientId, final boolean useProofKey) {
-        return new CallAction<>(new ActionCallback<IdentityTokens, ResponseZerokitError>() {
+        return new CallAction<IdentityTokens, ResponseZerokitError>(new ActionCallback<IdentityTokens, ResponseZerokitError>() {
 
             @Override
             public void call(final Callback<? super IdentityTokens, ? super ResponseZerokitError> subscriberInner) {
-                idpCheck().enqueue(new Action<Void>() {
+                initIdpCheck().enqueue(new Action<Void>() {
                     @Override
                     public void call(Void aVoid) {
                         idpStateHandler.setState(State.RUNNING);
 
-                        requireIdp(clientId, useProofKey, new CallbackExecutor<>(new Callback<IdentityTokens, ResponseZerokitError>() {
+                        requireIdp(clientId, useProofKey, new Callback<IdentityTokens, ResponseZerokitError>() {
                             @Override
                             public void onSuccess(IdentityTokens result) {
                                 subscriberInner.onSuccess(result);
@@ -1520,11 +1627,19 @@ public final class Zerokit {
                                 subscriberInner.onError(e);
                                 idpStateHandler.setState(State.FINISHED);
                             }
-                        }));
+                        });
                     }
                 });
             }
-        });
+        }) {
+            @Override
+            protected void checkThreadSync() {
+                if (isMainThread())
+                    throw new IllegalStateException("Sync IDP method call from the main thread is not possible." +
+                            "You can call sync method from background thread." +
+                            "You can call async method from any looper thread any time");
+            }
+        };
     }
 
     // ====================================
@@ -1593,6 +1708,7 @@ public final class Zerokit {
         });
     }
 
+
     /**
      * You can get some information about the link by calling getInvitationLinkInfo with the link secret.
      * The returned object contains a token necessary to accept the invitation.
@@ -1608,6 +1724,25 @@ public final class Zerokit {
             @Override
             public void call(Callback<? super ResponseZerokitInvitationLinkInfo, ? super ResponseZerokitError> subscriber) {
                 Zerokit.this.callFunction(Function.getInvitationLinkInfo, new CallbackJsonResult<>(subscriber, new ResponseZerokitInvitationLinkInfo()), secret);
+            }
+        });
+    }
+
+    /**
+     * Invitation links can be revoked, but to do this the user has to be both a member of the tresor and have the link secret.
+     * Revokes the link from the tresor with the secret provided
+     *
+     * @param tresorId the id of the tresor
+     * @param secret The secret is the one that was concatenated to the end of the url in createInvitationLink.
+     * @return Resolves to the operation id that must be approved for the operation to be effective.
+     */
+    @SuppressWarnings("WeakerAccess")
+    @NonNull
+    public Call<String, ResponseZerokitError> revokeInvitationLink(@NonNull final String tresorId, @NonNull final String secret) {
+        return new CallAction<>(new ActionCallback<String, ResponseZerokitError>() {
+            @Override
+            public void call(Callback<? super String, ? super ResponseZerokitError> subscriber) {
+                Zerokit.this.callFunction(Function.revokeInvitationLink, new CallbackStringResult(subscriber), tresorId, secret);
             }
         });
     }
