@@ -2,9 +2,10 @@
 buildscript {
     repositories {
         jcenter()
+        google()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:3.0.0-alpha6'
+        classpath 'com.android.tools.build:gradle:3.0.0'
         classpath 'com.dicedmelon.gradle:jacoco-android:0.1.1'
     }
 }
@@ -12,12 +13,13 @@ buildscript {
 allprojects {
     repositories {
         jcenter()
+        google()
     }
 
     /** To avoid writing this in every android module */
     project.ext {
         compileSdkVersion = 25
-        buildToolsVersion = "25.0.2"
+        buildToolsVersion = "26.0.2"
         minSdkVersion = 21
         targetSdkVersion = 25
         versionCode = 1

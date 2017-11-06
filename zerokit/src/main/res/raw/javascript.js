@@ -125,6 +125,25 @@ function bin2string(array){
 	return result;
 }
 
+function uint8ArrayToBase64(bytes) {
+    var binary = '';
+    var len = bytes.byteLength;
+    for (var i = 0; i < len; i++) {
+        binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+}
+
+function base64ToUint8Array(base64) {
+    var binary_string = atob(base64);
+    var len = binary_string.length;
+    var bytes = new Uint8Array(len);
+    for (var i = 0; i < len; i++)        {
+        bytes[i] = binary_string.charCodeAt(i);
+    }
+    return bytes;
+}
+
 function callFunction(json){
     var callData =  JSON.parse(json);
     var mainObj = callData.type == 2 ? mobileCmd : (callData.type == 1 ? cmd.api : this);
@@ -135,6 +154,8 @@ function callFunction(json){
             callData.args.splice(extraArg.position, 0, bin2string(getByteArray(extraArg.id)));
         } else if (extraArg.type == "JSONToken"){
             callData.args.splice(extraArg.position, 0, parseTokenStr(extraArg.id));
+        } else if (extraArg.type == "Base64"){
+            callData.args.splice(extraArg.position, 0, base64ToUint8Array(extraArg.id));
         }
     }
 
@@ -148,6 +169,8 @@ function callFunction(json){
         obj.apply(obj, callData.args).then(function(succ) {
             if (callData.responseFormatter == "JSONToken"){
                 succ = jsonTokenResponseFormatter(succ);
+            } else if (callData.responseFormatter == "Base64"){
+                succ = uint8ArrayToBase64(succ);
             }
             JSInterfaceResponseHandler.onSuccess(JSON.stringify(succ), callData.id);
         }, function(err) {

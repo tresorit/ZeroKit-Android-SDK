@@ -1,5 +1,7 @@
 package com.tresorit.zerokit;
 
+import static org.junit.Assert.*;
+
 import android.content.Context;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -8,7 +10,6 @@ import android.support.annotation.NonNull;
 import android.support.test.InstrumentationRegistry;
 import android.support.test.runner.AndroidJUnit4;
 import android.text.TextUtils;
-
 import com.tresorit.zerokit.call.Action;
 import com.tresorit.zerokit.call.Response;
 import com.tresorit.zerokit.response.IdentityTokens;
@@ -24,20 +25,13 @@ import com.tresorit.zerokit.response.ResponseZerokitPasswordStrength;
 import com.tresorit.zerokit.response.ResponseZerokitRegister;
 import com.tresorit.zerokit.util.Holder;
 import com.tresorit.zerokit.util.JSONObject;
-
-import junit.framework.Assert;
-
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import junit.framework.Assert;
+import org.junit.*;
+import org.junit.runner.*;
 
 /**
  * Instrumentation test, which will execute on an Android device.
@@ -217,6 +211,11 @@ public class InstrumentedTest {
     @Test
     public void testCreateTresorAndEncryptText() {
         encryptTest(createTresor(), "textToEncrypt01");
+    }
+
+    @Test
+    public void testCreateTresorAndEncryptBytes() {
+        encryptByteTest(createTresor(), "textToEncrypt01");
     }
 
     @Test
@@ -400,6 +399,13 @@ public class InstrumentedTest {
     private String encryptTest(String tresorId, String text) {
         String cipherText = encrypt(tresorId, text);
         String decryptedText = decrypt(cipherText);
+        assertEquals(text, decryptedText);
+        return cipherText;
+    }
+
+    private String encryptByteTest(String tresorId, String text) {
+        String cipherText = encryptBytes(tresorId, text.getBytes());
+        String decryptedText = new String(decryptBytes(cipherText));
         assertEquals(text, decryptedText);
         return cipherText;
     }
@@ -654,12 +660,24 @@ public class InstrumentedTest {
         return response.getResult();
     }
 
+    private byte[] decryptBytes(String textToDecrypt) {
+        Response<byte[], ResponseZerokitError> response = zerokit.decryptBytes(textToDecrypt).execute();
+        Assert.assertFalse(response.isError());
+        return response.getResult();
+    }
+
     private Response<String, ResponseZerokitError> decrypt_noassert(String textToDecrypt) {
         return zerokit.decrypt(textToDecrypt).execute();
     }
 
     private String encrypt(String tresorId, String textToEncrypt) {
         Response<String, ResponseZerokitError> response = zerokit.encrypt(tresorId, textToEncrypt).execute();
+        Assert.assertFalse(response.isError());
+        return response.getResult();
+    }
+
+    private String encryptBytes(String tresorId, byte[] byteArray) {
+        Response<String, ResponseZerokitError> response = zerokit.encryptBytes(tresorId, byteArray).execute();
         Assert.assertFalse(response.isError());
         return response.getResult();
     }

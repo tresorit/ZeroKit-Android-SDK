@@ -1,4 +1,9 @@
 # Change Log
+## [4.1.3] - 2017-11-06
+### Added
+- **Encrypt and Decrypt byte methods**: New methods for encrypt and decrypt byte arrays instead string
+- Using the new **v5 api**
+
 ## [4.1.2] - 2017-07-14
 ### Added
 - **Invitation links**: Invitation links are used to invite someone into a tresor who is not a registered user. This method of invitation is made this way to communicate a best-practice. Using the link format below (placing the secret inside the fragment identifier of the url) you can ensure that the credentials necessary to get access to the tresor doesn't travel to your server and subsequently through the network. We advise, that you don't store any of the invitation links on your server unencrypted as it is a security critical information, which, in case of a breach, can be used to get access to user data. Even so, to achieve the best security you should use only password protected links and ask the users to transfer the password and the link to the invitee through different channels (e.g.: email the link and text/phone the password).

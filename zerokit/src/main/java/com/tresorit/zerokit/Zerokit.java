@@ -1,5 +1,9 @@
 package com.tresorit.zerokit;
 
+import static com.tresorit.zerokit.Zerokit.Function.Type.Cmd;
+import static com.tresorit.zerokit.Zerokit.Function.Type.Default;
+import static com.tresorit.zerokit.Zerokit.Function.Type.MobileCmd;
+
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.net.ConnectivityManager;
@@ -22,7 +26,6 @@ import android.webkit.URLUtil;
 import android.webkit.WebChromeClient;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-
 import com.tresorit.zerokit.call.Action;
 import com.tresorit.zerokit.call.ActionCallback;
 import com.tresorit.zerokit.call.Call;
@@ -41,12 +44,6 @@ import com.tresorit.zerokit.response.ResponseZerokitRegister;
 import com.tresorit.zerokit.util.Holder;
 import com.tresorit.zerokit.util.TenantIdResolver;
 import com.tresorit.zerokit.util.ZerokitJson;
-
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-import org.json.JSONTokener;
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -88,16 +85,15 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import javax.crypto.Cipher;
 import javax.crypto.CipherInputStream;
 import javax.crypto.CipherOutputStream;
 import javax.crypto.NoSuchPaddingException;
 import javax.security.auth.x500.X500Principal;
-
-import static com.tresorit.zerokit.Zerokit.Function.Type.Cmd;
-import static com.tresorit.zerokit.Zerokit.Function.Type.Default;
-import static com.tresorit.zerokit.Zerokit.Function.Type.MobileCmd;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.json.JSONTokener;
 
 
 public final class Zerokit {
@@ -315,7 +311,7 @@ public final class Zerokit {
 
         apiRoot = uri.getAuthority();
         tenantId = TenantIdResolver.getTenantId(baseUrl);
-        apiRootUrl = uri.buildUpon().appendPath("static").appendPath("v4").appendPath("api.html").build().toString();
+        apiRootUrl = uri.buildUpon().appendPath("static").appendPath("v5").appendPath("api.html").build().toString();
 
         observers = new ConcurrentHashMap<>();
 
@@ -1049,7 +1045,7 @@ public final class Zerokit {
     }
 
     private enum ArgType {
-        ByteArray, JSONToken
+        ByteArray, JSONToken, Base64
     }
 
     private static class ExtraArg {
@@ -1085,7 +1081,9 @@ public final class Zerokit {
         createInvitationLinkNoPassword,
         createTresor,
         decrypt,
+        decryptBytes(Cmd, ArgType.Base64, new ExtraArg(ArgType.Base64, 0)),
         encrypt,
+        encryptBytes(Cmd,  ArgType.Base64, new ExtraArg(ArgType.Base64, 1)),
         getInvitationLinkInfo(Cmd, ArgType.JSONToken),
         revokeInvitationLink,
         kickFromTresor,
@@ -1094,7 +1092,7 @@ public final class Zerokit {
         whoAmI;
 
 
-        @IntDef({Default, Cmd, MobileCmd})
+        //@IntDef({Default, Cmd, MobileCmd})
         @interface Type {
             int Default = 0;
             int Cmd = 1;
@@ -1393,6 +1391,33 @@ public final class Zerokit {
                 e.printStackTrace();
             }
             return result;
+        }
+    }
+
+    private class CallbackByteArrayResult extends CallbackByteArrayIds<byte[]> {
+
+        /**
+         * Constructs an observer object which can handle JSON responses
+         *
+         * @param subscriber which will handle the responses
+         */
+        CallbackByteArrayResult(@NonNull Callback<? super byte[], ? super ResponseZerokitError> subscriber) {
+            super(subscriber);
+        }
+
+        CallbackByteArrayResult(@NonNull Callback<? super byte[], ? super ResponseZerokitError> subscriber, String... ids) {
+            super(subscriber, ids);
+        }
+
+        @Override
+        @NonNull
+        byte[] getResult(@NonNull String result) {
+            if (!"null".equals(result)) try {
+                return Base64.decode((String) new JSONTokener(result).nextValue(), Base64.DEFAULT);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+            return new byte[]{};
         }
     }
 
@@ -2356,6 +2381,25 @@ public final class Zerokit {
     }
 
     /**
+     * Decrypts the given cipherText
+     *
+     * @param cipherText ZeroKit encrypted text
+     * @return Resolves to the byte array.
+     * <p>
+     * BadInput 	- Invalid cipherText
+     * Forbidden	- This user does not have access to the tresor
+     */
+    @NonNull
+    public Call<byte[], ResponseZerokitError> decryptBytes(@NonNull final String cipherText) {
+        return new CallAction<>(new ActionCallback<byte[], ResponseZerokitError>() {
+            @Override
+            public void call(Callback<? super byte[], ? super ResponseZerokitError> subscriber) {
+                Zerokit.this.callFunction(Function.decryptBytes, new CallbackByteArrayResult(subscriber, cipherText), cipherText);
+            }
+        });
+    }
+
+    /**
      * Encrypts the plaintext by the given tresor.
      *
      * @param tresorId  The id of the tresor, that will be used to encrypt the text
@@ -2373,6 +2417,28 @@ public final class Zerokit {
             @Override
             public void call(Callback<? super String, ? super ResponseZerokitError> subscriber) {
                 Zerokit.this.callFunction(Function.encrypt, new CallbackStringResult(subscriber), tresorId, plainText);
+            }
+        });
+    }
+
+    /**
+     * Encrypts the byte array by the given tresor.
+     *
+     * @param tresorId  The id of the tresor, that will be used to encrypt the text
+     * @param byteArray The byte array to encrypt
+     * @return Resolves to the cipher text. It contains the tresorId, so the it can be decrypted by itself.
+     * <p>
+     * BadInput         - The tresorId and plainText has to be a non-empty string
+     * BadInput         - Invalid tresorId
+     * TresorNotExists  - Couldn't find a tresor by the given id
+     * Forbidden	    - This user does not have access to the tresor
+     */
+    @NonNull
+    public Call<String, ResponseZerokitError> encryptBytes(@NonNull final String tresorId, @NonNull final byte[] byteArray) {
+        return new CallAction<>(new ActionCallback<String, ResponseZerokitError>() {
+            @Override
+            public void call(Callback<? super String, ? super ResponseZerokitError> subscriber) {
+                Zerokit.this.callFunction(Function.encryptBytes, new CallbackStringResult(subscriber, Base64.encodeToString(byteArray, Base64.DEFAULT)), tresorId);
             }
         });
     }
