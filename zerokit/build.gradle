@@ -24,12 +24,10 @@ android {
             testCoverageEnabled true
         }
     }
-
 }
 
 dependencies {
     implementation project(':common')
-    androidTestCompile project(':adminapi')
 
     compile fileTree(include: ['*.jar'], dir: 'libs')
     compile "com.android.support:appcompat-v7:$appcompatVersion"

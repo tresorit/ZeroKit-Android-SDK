@@ -1,7 +1,0 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.zerokit.zerokit">
-
-    <application android:allowBackup="false">
-    </application>
-
-</manifest>

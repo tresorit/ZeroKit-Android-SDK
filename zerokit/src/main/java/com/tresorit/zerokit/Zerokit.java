@@ -1092,7 +1092,7 @@ public final class Zerokit {
         whoAmI;
 
 
-        //@IntDef({Default, Cmd, MobileCmd})
+//        @IntDef({Default, Cmd, MobileCmd})
         @interface Type {
             int Default = 0;
             int Cmd = 1;
