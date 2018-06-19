@@ -1,3 +1,6 @@
+**Notice:** This project is discontinued and no longer maintained nor supported by Tresorit. This repository only exists for archival purposes.
+***
+
 # ZeroKit SDK for Android
 **[ZeroKit](https://tresorit.com/zerokit/)** is a simple, breach-proof user authentication and end-to-end encryption library.
 
